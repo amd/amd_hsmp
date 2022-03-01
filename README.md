@@ -21,13 +21,13 @@ third-generation AMD EPYC processors (codenamed "Milan")) or later
 CPUs. Using the amd_hsmp module on earlier CPUs could produce unexpected
 results, and may cause the processor to operate outside of your motherboard
 or system specifications. Correspondingly, defaults to only executing on
-AMD Family 19h Model (0 ~ Fh & 30h ~ 3Fh) server line of processors.
+AMD Family 19h Model (0 ~ Fh, 10h ~ 1Fh & 30h ~ 3Fh) EPYC processors.
 
 
 Interface
 ---------
 
-See amd_hsmp.c for details about the SysFS interface.
+See amd_hsmp.h for details about the IOCTL interface.
 
 
 BIOS configuration
