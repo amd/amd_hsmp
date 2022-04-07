@@ -17,10 +17,10 @@
 #include <linux/pci.h>
 #include <linux/platform_device.h>
 #include <linux/semaphore.h>
-#include "amd_hsmp.h"	/* this will come from linux kernel as UAPI header */
+#include "amd_hsmp.h"  /* this will come from linux kernel as UAPI header */
 
 #define DRIVER_NAME		"amd_hsmp"
-#define DRIVER_VERSION		"1.0"
+#define DRIVER_VERSION		"1.8"
 
 /* HSMP Status / Error codes */
 #define HSMP_STATUS_NOT_READY	0x00
@@ -51,34 +51,6 @@ static struct semaphore *hsmp_sem;
 
 static struct miscdevice hsmp_device;
 
-/* List of "Configure/SET" msgs */
-static u32 hsmp_set_msgs[] = {
-	HSMP_SET_SOCKET_POWER_LIMIT,
-	HSMP_SET_BOOST_LIMIT,
-	HSMP_SET_BOOST_LIMIT_SOCKET,
-	HSMP_SET_XGMI_LINK_WIDTH,
-	HSMP_SET_DF_PSTATE,
-	HSMP_AUTO_DF_PSTATE,
-	HSMP_SET_NBIO_DPM_LEVEL
-};
-
-/* List of "Monitor/GET" msgs */
-static u32 hsmp_get_msgs[] = {
-	HSMP_TEST,
-	HSMP_GET_SMU_VER,
-	HSMP_GET_PROTO_VER,
-	HSMP_GET_SOCKET_POWER,
-	HSMP_GET_SOCKET_POWER_LIMIT,
-	HSMP_GET_SOCKET_POWER_LIMIT_MAX,
-	HSMP_GET_BOOST_LIMIT,
-	HSMP_GET_PROC_HOT,
-	HSMP_GET_FCLK_MCLK,
-	HSMP_GET_CCLK_THROTTLE_LIMIT,
-	HSMP_GET_C0_PERCENT,
-	HSMP_GET_DDR_BANDWIDTH,
-	HSMP_GET_TEMP_MONITOR
-};
-
 static int amd_hsmp_rdwr(struct pci_dev *root, u32 address,
 			 u32 *value, bool write)
 {
@@ -107,7 +79,7 @@ static int __hsmp_send_message(struct pci_dev *root, struct hsmp_message *msg)
 {
 	unsigned long timeout, short_sleep;
 	u32 mbox_status;
-	u32 arg_num;
+	u32 index;
 	int ret;
 
 	/* Clear the status register */
@@ -118,16 +90,16 @@ static int __hsmp_send_message(struct pci_dev *root, struct hsmp_message *msg)
 		return ret;
 	}
 
-	arg_num = 0;
+	index = 0;
 	/* Write any message arguments */
-	while (arg_num < msg->num_args) {
-		ret = amd_hsmp_rdwr(root, SMN_HSMP_MSG_DATA + (arg_num << 2),
-				    &msg->args[arg_num], HSMP_WR);
+	while (index < msg->num_args) {
+		ret = amd_hsmp_rdwr(root, SMN_HSMP_MSG_DATA + (index << 2),
+				    &msg->args[index], HSMP_WR);
 		if (ret) {
-			pr_err("Error %d writing message argument %d\n", ret, arg_num);
+			pr_err("Error %d writing message argument %d\n", ret, index);
 			return ret;
 		}
-		arg_num++;
+		index++;
 	}
 
 	/* Write the message ID which starts the operation */
@@ -174,20 +146,44 @@ static int __hsmp_send_message(struct pci_dev *root, struct hsmp_message *msg)
 		return -EIO;
 	}
 
-	/* SMU has responded OK. Read response data */
-	arg_num = 0;
-	while (arg_num < msg->response_sz) {
-		ret = amd_hsmp_rdwr(root, SMN_HSMP_MSG_DATA + (arg_num << 2),
-				    &msg->response[arg_num], HSMP_RD);
+	/*
+	 * SMU has responded OK. Read response data.
+	 * SMU reads the input arguments from eight 32 bit registers starting
+	 * from SMN_HSMP_MSG_DATA and writes the response data to the same
+	 * SMN_HSMP_MSG_DATA address.
+	 * We copy the response data if any, back to the args[].
+	 */
+	index = 0;
+	while (index < msg->response_sz) {
+		ret = amd_hsmp_rdwr(root, SMN_HSMP_MSG_DATA + (index << 2),
+				    &msg->args[index], HSMP_RD);
 		if (ret) {
 			pr_err("Error %d reading response %u for message ID:%u\n",
-			       ret, arg_num, msg->msg_id);
+			       ret, index, msg->msg_id);
 			break;
 		}
-		arg_num++;
+		index++;
 	}
 
 	return ret;
+}
+
+static int validate_message(struct hsmp_message *msg)
+{
+	/* msg_id against valid range of message IDs */
+	if (msg->msg_id < HSMP_TEST || msg->msg_id >= HSMP_MSG_ID_MAX)
+		return -ENOMSG;
+
+	/* msg_id is a reserved message ID */
+	if (hsmp_msg_desc_table[msg->msg_id].type == HSMP_RSVD)
+		return -ENOMSG;
+
+	/* num_args and response_sz against the HSMP spec */
+	if (msg->num_args != hsmp_msg_desc_table[msg->msg_id].num_args ||
+	    msg->response_sz != hsmp_msg_desc_table[msg->msg_id].response_sz)
+		return -EINVAL;
+
+	return 0;
 }
 
 int hsmp_send_message(struct hsmp_message *msg)
@@ -202,11 +198,9 @@ int hsmp_send_message(struct hsmp_message *msg)
 	if (!nb || !nb->root)
 		return -ENODEV;
 
-	if (msg->msg_id < HSMP_TEST || msg->msg_id >= HSMP_MSG_ID_MAX)
-		return -EINVAL;
-
-	if (msg->num_args > HSMP_MAX_MSG_LEN || msg->response_sz > HSMP_MAX_MSG_LEN)
-		return -EINVAL;
+	ret = validate_message(msg);
+	if (ret)
+		return ret;
 
 	/*
 	 * The time taken by smu operation to complete is between
@@ -227,7 +221,7 @@ int hsmp_send_message(struct hsmp_message *msg)
 }
 EXPORT_SYMBOL_GPL(hsmp_send_message);
 
-static int hsmp_test(u16 sock_ind)
+static int hsmp_test(u16 sock_ind, u32 value)
 {
 	struct hsmp_message msg = { 0 };
 	struct amd_northbridge *nb;
@@ -238,37 +232,27 @@ static int hsmp_test(u16 sock_ind)
 		return ret;
 
 	/*
-	 * Test the hsmp port by performing TEST command. The test message takes
-	 * one argument and returns the value of that argument + 1.
+	 * Test the hsmp port by performing TEST command. The test message
+	 * takes one argument and returns the value of that argument + 1.
 	 */
-	msg.sock_ind	= sock_ind;
-	msg.response_sz = 1;
-	msg.num_args	= 1;
 	msg.msg_id	= HSMP_TEST;
-	msg.args[0]	= 0xDEADBEEF;
+	msg.num_args	= 1;
+	msg.response_sz	= 1;
+	msg.args[0]	= value;
+	msg.sock_ind	= sock_ind;
 
 	ret = __hsmp_send_message(nb->root, &msg);
 	if (ret)
 		return ret;
 
-	if (msg.response[0] != (msg.args[0] + 1)) {
+	/* Check the response value */
+	if (msg.args[0] != (value + 1)) {
 		pr_err("Socket %d test message failed, Expected 0x%08X, received 0x%08X\n",
-		       sock_ind, msg.args[0] + 1, msg.response[0]);
+		       sock_ind, (value + 1), msg.args[0]);
 		return -EBADE;
 	}
 
-	return 0;
-}
-
-static int search_msg_list(u32 msgid, u32 *list, int size)
-{
-	int i;
-
-	for (i = 0; i < size; i++) {
-		if (msgid == list[i])
-			return 0;
-	}
-	return -EINVAL;
+	return ret;
 }
 
 static long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
@@ -280,40 +264,49 @@ static long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	if (copy_struct_from_user(&msg, sizeof(msg), arguser, sizeof(struct hsmp_message)))
 		return -EFAULT;
 
+	/*
+	 * Check msg_id is within the range of supported msg ids
+	 * i.e within the array bounds of hsmp_msg_desc_table
+	 */
+	if (msg.msg_id < HSMP_TEST || msg.msg_id >= HSMP_MSG_ID_MAX)
+		return -ENOMSG;
+
 	switch (fp->f_mode & (FMODE_WRITE | FMODE_READ)) {
 	case FMODE_WRITE:
-		/* check if the msgid is a set msg */
-		ret = search_msg_list(msg.msg_id, hsmp_set_msgs, ARRAY_SIZE(hsmp_set_msgs));
-		if (ret)
-			return ret;
-
-		return hsmp_send_message(&msg);
+		/*
+		 * Device is opened in O_WRONLY mode
+		 * Execute only set/configure commands
+		 */
+		if (hsmp_msg_desc_table[msg.msg_id].type != HSMP_SET)
+			return -EINVAL;
+		break;
 	case FMODE_READ:
-		/* check if the msgid is a get msg */
-		ret = search_msg_list(msg.msg_id, hsmp_get_msgs, ARRAY_SIZE(hsmp_get_msgs));
-		if (ret)
-			return ret;
+		/*
+		 * Device is opened in O_RDONLY mode
+		 * Execute only get/monitor commands
+		 */
+		if (hsmp_msg_desc_table[msg.msg_id].type != HSMP_GET)
+			return -EINVAL;
 		break;
 	case FMODE_READ | FMODE_WRITE:
-		ret = search_msg_list(msg.msg_id, hsmp_set_msgs, ARRAY_SIZE(hsmp_set_msgs));
-		if (!ret)
-			return hsmp_send_message(&msg);
-
-		ret = search_msg_list(msg.msg_id, hsmp_get_msgs, ARRAY_SIZE(hsmp_get_msgs));
-		if (ret)
-			return ret;
-
+		/*
+		 * Device is opened in O_RDWR mode
+		 * Execute both get/monitor and set/configure commands
+		 */
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	ret =  hsmp_send_message(&msg);
+	ret = hsmp_send_message(&msg);
 	if (ret)
 		return ret;
 
-	if (copy_to_user(arguser, &msg, sizeof(struct hsmp_message)))
-		return -EFAULT;
+	if (hsmp_msg_desc_table[msg.msg_id].response_sz > 0) {
+		/* Copy results back to user for get/monitor commands */
+		if (copy_to_user(arguser, &msg, sizeof(struct hsmp_message)))
+			return -EFAULT;
+	}
 
 	return 0;
 }
@@ -326,7 +319,7 @@ static const struct file_operations hsmp_fops = {
 
 static int hsmp_pltdrv_probe(struct platform_device *pdev)
 {
-	int ret, i;
+	int i;
 
 	hsmp_sem = devm_kzalloc(&pdev->dev,
 				(amd_nb_num() * sizeof(struct semaphore)),
@@ -344,11 +337,7 @@ static int hsmp_pltdrv_probe(struct platform_device *pdev)
 	hsmp_device.nodename	= "hsmp";
 	hsmp_device.mode	= 0644;
 
-	ret = misc_register(&hsmp_device);
-	if (ret)
-		return ret;
-
-	return 0;
+	return misc_register(&hsmp_device);
 }
 
 static int hsmp_pltdrv_remove(struct platform_device *pdev)
@@ -374,6 +363,12 @@ static int __init hsmp_plt_init(void)
 	u16 num_sockets;
 	int i;
 
+	if (boot_cpu_data.x86_vendor != X86_VENDOR_AMD || boot_cpu_data.x86 < 0x19) {
+		pr_err("HSMP is not supported on Family:%x model:%x\n",
+		       boot_cpu_data.x86, boot_cpu_data.x86_model);
+		return ret;
+	}
+
 	/*
 	 * amd_nb_num() returns number of SMN/DF interfaces present in the system
 	 * if we have N SMN/DF interfaces that ideally means N sockets
@@ -384,9 +379,13 @@ static int __init hsmp_plt_init(void)
 
 	/* Test the hsmp interface on each socket */
 	for (i = 0; i < num_sockets; i++) {
-		ret = hsmp_test(i);
-		if (ret)
-			return ret;
+		ret = hsmp_test(i, 0xDEADBEEF);
+		if (ret) {
+			pr_err("HSMP is not supported on Fam:%x model:%x\n",
+			       boot_cpu_data.x86, boot_cpu_data.x86_model);
+			pr_err("Or Is HSMP disabled in BIOS ?\n");
+			return -EOPNOTSUPP;
+		}
 	}
 
 	ret = platform_driver_register(&amd_hsmp_driver);
