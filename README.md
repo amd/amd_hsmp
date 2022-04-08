@@ -1,4 +1,7 @@
 # amd_hsmp
+
+NOTE: The AMD HSMP driver is now part of the Linux kernel upstream starting in v5.18-rc1. Review kernel.org for updated versions of this driver.
+
 AMD HSMP module to provide user interface to system management features
 
 The Host System Management Port (HSMP) kernel module provides user level
