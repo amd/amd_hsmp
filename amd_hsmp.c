@@ -260,8 +260,11 @@ static long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	int __user *arguser = (int  __user *)arg;
 	struct hsmp_message msg = { 0 };
 	int ret;
-
+#ifdef copy_struct_from_user 
 	if (copy_struct_from_user(&msg, sizeof(msg), arguser, sizeof(struct hsmp_message)))
+#else
+	if (copy_from_user(&msg, arguser, sizeof(struct hsmp_message)))
+#endif
 		return -EFAULT;
 
 	/*
