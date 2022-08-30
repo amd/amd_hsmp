@@ -366,7 +366,7 @@ static int __init hsmp_plt_init(void)
 	u16 num_sockets;
 	int i;
 
-	if (boot_cpu_data.x86_vendor != X86_VENDOR_AMD || boot_cpu_data.x86 < 0x19) {
+	if (boot_cpu_data.x86_vendor != X86_VENDOR_AMD || boot_cpu_data.x86 < 0x17) {
 		pr_err("HSMP is not supported on Family:%x model:%x\n",
 		       boot_cpu_data.x86, boot_cpu_data.x86_model);
 		return ret;
