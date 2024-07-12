@@ -20,6 +20,8 @@
 #include <linux/acpi.h>
 #include "amd_hsmp.h"  /* this will come from linux kernel as UAPI header */
 
+#include <generated/uapi/linux/version.h>
+
 #define DRIVER_NAME		"amd_hsmp"
 #define DRIVER_VERSION		"2.4"
 #define ACPI_HSMP_DEVICE_HID	"AMDI0097"
@@ -728,8 +730,12 @@ static int hsmp_create_non_acpi_sysfs_if(struct device *dev)
 
 		hsmp_create_attr_list(attr_grp, dev, i);
 	}
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,10,0)
+	return device_add_groups(dev, hsmp_attr_grps);
+#else
 	return devm_device_add_groups(dev, hsmp_attr_grps);
+#endif
+
 }
 
 static int hsmp_create_acpi_sysfs_if(struct device *dev)
