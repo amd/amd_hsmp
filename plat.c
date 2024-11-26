@@ -23,6 +23,8 @@
 #define DRIVER_NAME		"amd_hsmp"
 #define DRIVER_VERSION		"2.3"
 
+#include <generated/uapi/linux/version.h>
+
 /*
  * To access specific HSMP mailbox register, s/w writes the SMN address of HSMP mailbox
  * register into the SMN_INDEX register, and reads/writes the SMN_DATA reg.
@@ -81,8 +83,10 @@ static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
 
 	sock_ind = (uintptr_t)battr->private;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
 	if (id == 0 && sock_ind >= hsmp_pdev->num_sockets)
 		return SYSFS_GROUP_INVISIBLE;
+#endif
 
 	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6)
 		return battr->attr.mode;
@@ -225,14 +229,21 @@ static int hsmp_pltdrv_probe(struct platform_device *pdev)
 	return hsmp_misc_register(&pdev->dev);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 1)
 static void hsmp_pltdrv_remove(struct platform_device *pdev)
+#else
+static int hsmp_pltdrv_remove(struct platform_device *pdev)
+#endif
 {
 	hsmp_misc_deregister();
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 1)
+	return 0;
+#endif
 }
 
 static struct platform_driver amd_hsmp_driver = {
 	.probe		= hsmp_pltdrv_probe,
-	.remove		= hsmp_pltdrv_remove,
+	.remove 	= hsmp_pltdrv_remove,
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.dev_groups = hsmp_groups,

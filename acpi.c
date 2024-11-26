@@ -22,6 +22,7 @@
 #include <linux/uuid.h>
 
 #include <uapi/asm-generic/errno-base.h>
+#include <generated/uapi/linux/version.h>
 
 #include "hsmp.h"
 #include "amd_hsmp.h"
@@ -348,7 +349,11 @@ static int hsmp_acpi_probe(struct platform_device *pdev)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
 static void hsmp_acpi_remove(struct platform_device *pdev)
+#else
+static int hsmp_acpi_remove(struct platform_device *pdev)
+#endif
 {
 	/*
 	 * We register only one misc_device even on multi-socket system.
@@ -358,6 +363,9 @@ static void hsmp_acpi_remove(struct platform_device *pdev)
 		hsmp_misc_deregister();
 		hsmp_pdev->is_probed = false;
 	}
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
+	return 0;
+#endif
 }
 
 static struct platform_driver amd_hsmp_driver = {
