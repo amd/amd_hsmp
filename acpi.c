@@ -9,7 +9,6 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <asm/amd_hsmp.h>
 #include <asm/amd_nb.h>
 
 #include <linux/acpi.h>
@@ -25,6 +24,7 @@
 #include <uapi/asm-generic/errno-base.h>
 
 #include "hsmp.h"
+#include "amd_hsmp.h"
 
 #define DRIVER_NAME		"amd_hsmp"
 #define DRIVER_VERSION		"2.3"
