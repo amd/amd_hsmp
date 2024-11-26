@@ -8,4 +8,11 @@
 #   Lewis Carroll <lewis.carroll@amd.com>
 #
 
-obj-m := amd_hsmp.o
+hsmp_acpi-objs := acpi.o
+obj-m := hsmp_acpi.o
+
+hsmp_common-objs := hsmp.o
+obj-m += hsmp_common.o
+
+amd_hsmp-objs := plat.o
+obj-m += amd_hsmp.o
