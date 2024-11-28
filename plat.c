@@ -21,7 +21,7 @@
 #include "amd_hsmp.h"
 
 #define DRIVER_NAME		"amd_hsmp"
-#define DRIVER_VERSION		"2.3"
+#define DRIVER_VERSION		"2.4"
 
 #include <generated/uapi/linux/version.h>
 

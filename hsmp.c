@@ -37,7 +37,13 @@
 #define HSMP_WR			true
 #define HSMP_RD			false
 
-#define DRIVER_VERSION		"2.3"
+#define DRIVER_VERSION		"2.4"
+
+/*
+ * When same message numbers are used for both GET and SET operation,
+ * bit:31 indicates whether its SET or GET operation.
+ */
+#define CHECK_GET_BIT		BIT(31)
 
 static struct hsmp_plat_device hsmp_pdev;
 
@@ -172,23 +178,27 @@ static int validate_message(struct hsmp_message *msg)
 		return -ENOMSG;
 
 	/*
-	 * Some older messages are updated to add both set and get operation in the same message.
-	 * In this case, get operation will have response_sz as 1 or more,
-	 * but set operation need not to have response_sz.
-	 * To support this get/set in same message, hsmp_msg_desc_table indicates only
-	 * maximum allowed response_sz.
+	 * num_args passed by user should match the num_args specified in
+	 * message description table.
+	 */
+	if (msg->num_args != hsmp_msg_desc_table[msg->msg_id].num_args)
+		return -EINVAL;
+
+	/*
+	 * Some older HSMP SET messages are updated to add GET in the same message.
+	 * In these messages, GET returns the current value and SET also returns
+	 * the successfully set value. To support this GET and SET in same message
+	 * while maintaining backward compatibility for the HSMP users,
+	 * hsmp_msg_desc_table[] indicates only maximum allowed response_sz.
 	 */
 	if (hsmp_msg_desc_table[msg->msg_id].type == HSMP_SET_GET) {
-		if (msg->num_args != hsmp_msg_desc_table[msg->msg_id].num_args ||
-		    msg->response_sz > hsmp_msg_desc_table[msg->msg_id].response_sz)
+		if (msg->response_sz > hsmp_msg_desc_table[msg->msg_id].response_sz)
 			return -EINVAL;
 	} else {
-		/* num_args and response_sz against the HSMP spec */
-		if (msg->num_args != hsmp_msg_desc_table[msg->msg_id].num_args ||
-		    msg->response_sz != hsmp_msg_desc_table[msg->msg_id].response_sz)
+		/* only HSMP_SET or HSMP_GET messages go through this strict check */
+		if (msg->response_sz != hsmp_msg_desc_table[msg->msg_id].response_sz)
 			return -EINVAL;
 	}
-
 	return 0;
 }
 
@@ -254,24 +264,19 @@ int hsmp_test(u16 sock_ind, u32 value)
 
 	return ret;
 }
+EXPORT_SYMBOL_NS_GPL(hsmp_test, AMD_HSMP);
 
 static bool is_get_msg(struct hsmp_message *msg)
 {
 	if (hsmp_msg_desc_table[msg->msg_id].type == HSMP_GET)
 		return true;
 
-	if (hsmp_msg_desc_table[msg->msg_id].type == HSMP_SET_GET) {
-		/*
-		 * Same message numbers are used for both get and set operation. In those
-		 * mesgs, bit31 is used for identifying set/get.
-		 */
-		if (msg->args[0] & BIT(31))
-			return true;
-	}
+	if (hsmp_msg_desc_table[msg->msg_id].type == HSMP_SET_GET &&
+	    (msg->args[0] & CHECK_GET_BIT))
+		return true;
 
 	return false;
 }
-EXPORT_SYMBOL_NS_GPL(hsmp_test, AMD_HSMP);
 
 long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
