@@ -40,7 +40,7 @@
 #define DRIVER_VERSION		"2.3"
 
 struct hsmp_plat_device hsmp_pdev;
-EXPORT_SYMBOL_GPL(hsmp_pdev);
+EXPORT_SYMBOL_NS_GPL(hsmp_pdev, AMD_HSMP);
 
 /*
  * Send a message to the HSMP port via PCI-e config space registers
@@ -214,7 +214,7 @@ int hsmp_send_message(struct hsmp_message *msg)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(hsmp_send_message);
+EXPORT_SYMBOL_NS_GPL(hsmp_send_message, AMD_HSMP);
 
 int hsmp_test(u16 sock_ind, u32 value)
 {
@@ -262,7 +262,7 @@ static bool is_get_msg(struct hsmp_message *msg)
 
 	return false;
 }
-EXPORT_SYMBOL_GPL(hsmp_test);
+EXPORT_SYMBOL_NS_GPL(hsmp_test, AMD_HSMP);
 
 long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
@@ -347,7 +347,7 @@ ssize_t hsmp_metric_tbl_read(struct file *filp, struct kobject *kobj,
 
 	return bin_attr->size;
 }
-EXPORT_SYMBOL_GPL(hsmp_metric_tbl_read);
+EXPORT_SYMBOL_NS_GPL(hsmp_metric_tbl_read, AMD_HSMP);
 
 static int hsmp_get_tbl_dram_base(u16 sock_ind)
 {
@@ -390,7 +390,7 @@ umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
 	else
 		return 0;
 }
-EXPORT_SYMBOL_GPL(hsmp_is_sock_attr_visible);
+EXPORT_SYMBOL_NS_GPL(hsmp_is_sock_attr_visible, AMD_HSMP);
 
 static int hsmp_init_metric_tbl_bin_attr(struct bin_attribute **hattrs, u16 sock_ind)
 {
@@ -429,7 +429,7 @@ int hsmp_create_attr_list(struct attribute_group *attr_grp,
 
 	return hsmp_init_metric_tbl_bin_attr(hsmp_bin_attrs, sock_ind);
 }
-EXPORT_SYMBOL_GPL(hsmp_create_attr_list);
+EXPORT_SYMBOL_NS_GPL(hsmp_create_attr_list, AMD_HSMP);
 
 int hsmp_cache_proto_ver(u16 sock_ind)
 {
@@ -446,6 +446,7 @@ int hsmp_cache_proto_ver(u16 sock_ind)
 
 	return ret;
 }
+EXPORT_SYMBOL_NS_GPL(hsmp_cache_proto_ver, AMD_HSMP);
 
 static const struct file_operations hsmp_fops = {
 	.owner		= THIS_MODULE,
@@ -464,13 +465,13 @@ int hsmp_misc_register(struct device *dev)
 
 	return misc_register(&hsmp_pdev.mdev);
 }
-EXPORT_SYMBOL_GPL(hsmp_misc_register);
+EXPORT_SYMBOL_NS_GPL(hsmp_misc_register, AMD_HSMP);
 
 void hsmp_misc_deregister(void)
 {
 	misc_deregister(&hsmp_pdev.mdev);
 }
-EXPORT_SYMBOL_GPL(hsmp_misc_deregister);
+EXPORT_SYMBOL_NS_GPL(hsmp_misc_deregister, AMD_HSMP);
 
 MODULE_DESCRIPTION("AMD HSMP Common driver");
 MODULE_VERSION(DRIVER_VERSION);
