@@ -70,15 +70,14 @@ To clean the kernel module build directory:
 Loading
 -------
 
-If the HSMP module was installed you should use the modprobe command to
+If the HSMP modules are installed in standard path you should use the modprobe command to
 load the module.
 
+To load hsmp modules on platforms with ACPI supported BIOS (Family 0x1A, model 0x00-0x1F and future platforms):
+#> sudo modprobe hsmp_acpi
+
+To load hsmp module on non-ACPI BIOS(Family 0x19, model 0x00-0x1F, 0x30-0x3F, 0x90-0x9F, 0xA0-0xAF):
 #> sudo modprobe amd_hsmp
-
-The HSMP module can also be loaded using insmod if the module was not
-installed:
-
-#> sudo insmod ./amd_hsmp.ko
 
 
 DKMS support
