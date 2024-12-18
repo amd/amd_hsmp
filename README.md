@@ -96,6 +96,8 @@ Install the module using DKMS:
 
 Load the module:
 #> sudo modprobe amd_hsmp
+or
+#> sudo modprobe hsmp_acpi
 
 Building Module with specific version of kernel
 
