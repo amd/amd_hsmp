@@ -89,10 +89,10 @@ Add the module to DKMS tree:
 #> sudo dkms add ../hsmp_driver
 
 Build the module using DKMS:
-#> sudo dkms build amd_hsmp/1.0
+#> sudo dkms build amd_hsmp/2.4
 
 Install the module using DKMS:
-#> sudo dkms install amd_hsmp/1.0
+#> sudo dkms install amd_hsmp/2.4
 
 Load the module:
 #> sudo modprobe amd_hsmp
@@ -103,14 +103,14 @@ Add the module to DKMS tree:
 #> sudo dkms add ../hsmp_driver
 
 Build the module using DKMS:
-#> sudo dkms build amd_hsmp/1.0 -k linux_version
+#> sudo dkms build amd_hsmp/2.4 -k linux_version
 
 Install the module using DKMS:
-#> sudo dkms install amd_hsmp/1.0 -k linux_version
+#> sudo dkms install amd_hsmp/2.4 -k linux_version
 Module is built: /lib/modules/linux_version/updates/dkms/
 
 Notes: It is required to have specific linux verion header in /usr/src
 
 To remove module from dkms tree
-#> sudo dkms remove -m amd_hsmp/1.0 -all
-#> sudo rm -rf /usr/src/amd_hsmp-1.0/
+#> sudo dkms remove -m amd_hsmp/2.4 --all
+#> sudo rm -rf /usr/src/amd_hsmp-2.4/
