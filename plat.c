@@ -343,7 +343,11 @@ static void __exit hsmp_plt_exit(void)
 device_initcall(hsmp_plt_init);
 module_exit(hsmp_plt_exit);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+MODULE_IMPORT_NS("AMD_HSMP");
+#else
 MODULE_IMPORT_NS(AMD_HSMP);
+#endif
 MODULE_DESCRIPTION("AMD HSMP Platform Interface Driver");
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPL");

@@ -233,7 +233,11 @@ int hsmp_send_message(struct hsmp_message *msg)
 
 	return ret;
 }
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+EXPORT_SYMBOL_NS_GPL(hsmp_send_message, "AMD_HSMP");
+#else
 EXPORT_SYMBOL_NS_GPL(hsmp_send_message, AMD_HSMP);
+#endif
 
 int hsmp_test(u16 sock_ind, u32 value)
 {
@@ -264,7 +268,11 @@ int hsmp_test(u16 sock_ind, u32 value)
 
 	return ret;
 }
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+EXPORT_SYMBOL_NS_GPL(hsmp_test, "AMD_HSMP");
+#else
 EXPORT_SYMBOL_NS_GPL(hsmp_test, AMD_HSMP);
+#endif
 
 static bool is_get_msg(struct hsmp_message *msg)
 {
@@ -358,7 +366,11 @@ ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size)
 
 	return size;
 }
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+EXPORT_SYMBOL_NS_GPL(hsmp_metric_tbl_read, "AMD_HSMP");
+#else
 EXPORT_SYMBOL_NS_GPL(hsmp_metric_tbl_read, AMD_HSMP);
+#endif
 
 int hsmp_get_tbl_dram_base(u16 sock_ind)
 {
@@ -392,7 +404,11 @@ int hsmp_get_tbl_dram_base(u16 sock_ind)
 	}
 	return 0;
 }
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+EXPORT_SYMBOL_NS_GPL(hsmp_get_tbl_dram_base, "AMD_HSMP");
+#else
 EXPORT_SYMBOL_NS_GPL(hsmp_get_tbl_dram_base, AMD_HSMP);
+#endif
 
 int hsmp_cache_proto_ver(u16 sock_ind)
 {
@@ -409,7 +425,11 @@ int hsmp_cache_proto_ver(u16 sock_ind)
 
 	return ret;
 }
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+EXPORT_SYMBOL_NS_GPL(hsmp_cache_proto_ver, "AMD_HSMP");
+#else
 EXPORT_SYMBOL_NS_GPL(hsmp_cache_proto_ver, AMD_HSMP);
+#endif
 
 static const struct file_operations hsmp_fops = {
 	.owner		= THIS_MODULE,
@@ -428,19 +448,31 @@ int hsmp_misc_register(struct device *dev)
 
 	return misc_register(&hsmp_pdev.mdev);
 }
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+EXPORT_SYMBOL_NS_GPL(hsmp_misc_register, "AMD_HSMP");
+#else
 EXPORT_SYMBOL_NS_GPL(hsmp_misc_register, AMD_HSMP);
+#endif
 
 void hsmp_misc_deregister(void)
 {
 	misc_deregister(&hsmp_pdev.mdev);
 }
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+EXPORT_SYMBOL_NS_GPL(hsmp_misc_deregister, "AMD_HSMP");
+#else
 EXPORT_SYMBOL_NS_GPL(hsmp_misc_deregister, AMD_HSMP);
+#endif
 
 struct hsmp_plat_device *get_hsmp_pdev(void)
 {
 	return &hsmp_pdev;
 }
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+EXPORT_SYMBOL_NS_GPL(get_hsmp_pdev, "AMD_HSMP");
+#else
 EXPORT_SYMBOL_NS_GPL(get_hsmp_pdev, AMD_HSMP);
+#endif
 
 MODULE_DESCRIPTION("AMD HSMP Common driver");
 MODULE_VERSION(DRIVER_VERSION);
