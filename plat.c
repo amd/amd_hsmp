@@ -44,6 +44,7 @@ static struct hsmp_plat_device *hsmp_pdev;
 static int amd_hsmp_pci_rdwr(struct hsmp_socket *sock, u32 offset,
 			     u32 *value, bool write)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0)
 	int ret;
 
 	if (!sock->root)
@@ -58,6 +59,9 @@ static int amd_hsmp_pci_rdwr(struct hsmp_socket *sock, u32 offset,
 		     : pci_read_config_dword(sock->root, HSMP_DATA_REG, value));
 
 	return ret;
+#else
+	return amd_smn_hsmp_rdwr(sock->sock_ind, sock->mbinfo.base_addr + offset, value, write);
+#endif
 }
 
 static ssize_t hsmp_metric_tbl_plat_read(struct file *filp, struct kobject *kobj,
@@ -76,8 +80,13 @@ static ssize_t hsmp_metric_tbl_plat_read(struct file *filp, struct kobject *kobj
 	return hsmp_metric_tbl_read(sock, buf, count);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
+					 const struct bin_attribute *battr, int id)
+#else
 static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
 					 struct bin_attribute *battr, int id)
+#endif
 {
 	u16 sock_ind;
 
@@ -319,8 +328,13 @@ static int __init hsmp_plt_init(void)
 	 * amd_nb_num() returns number of SMN/DF interfaces present in the system
 	 * if we have N SMN/DF interfaces that ideally means N sockets
 	 */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0)
 	hsmp_pdev->num_sockets = amd_nb_num();
 	if (hsmp_pdev->num_sockets == 0 || hsmp_pdev->num_sockets > MAX_AMD_SOCKETS)
+#else
+	hsmp_pdev->num_sockets = amd_num_nodes();
+	if (hsmp_pdev->num_sockets == 0 || hsmp_pdev->num_sockets > MAX_AMD_NUM_NODES)
+#endif
 		return ret;
 
 	ret = platform_driver_register(&amd_hsmp_driver);

@@ -236,8 +236,13 @@ static ssize_t hsmp_metric_tbl_acpi_read(struct file *filp, struct kobject *kobj
 	return hsmp_metric_tbl_read(sock, buf, count);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
+					 const struct bin_attribute *battr, int id)
+#else
 static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
 					 struct bin_attribute *battr, int id)
+#endif
 {
 	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6)
 		return battr->attr.mode;
