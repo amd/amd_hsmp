@@ -16,7 +16,6 @@
 #include <linux/device.h>
 #include <linux/dev_printk.h>
 #include <linux/ioport.h>
-#include <linux/kstrtox.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/sysfs.h>
@@ -27,6 +26,12 @@
 
 #include "hsmp.h"
 #include "amd_hsmp.h"
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0)
+#include <linux/kstrtox.h>
+#else
+#include <linux/kernel.h>
+#endif
 
 #define DRIVER_NAME		"amd_hsmp"
 #define DRIVER_VERSION		"2.4"
