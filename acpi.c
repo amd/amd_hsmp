@@ -199,10 +199,14 @@ static int hsmp_read_acpi_crs(struct hsmp_socket *sock)
 	}
 	if (!sock->mbinfo.base_addr || !sock->mbinfo.size)
 		return -EINVAL;
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0)
 	/* The mapped region should be un-cached */
 	sock->virt_base_addr = devm_ioremap_uc(sock->dev, sock->mbinfo.base_addr,
 					       sock->mbinfo.size);
+#else
+	sock->virt_base_addr = devm_ioremap_nocache(sock->dev, sock->mbinfo.base_addr,
+					       sock->mbinfo.size);
+#endif
 	if (!sock->virt_base_addr) {
 		dev_err(sock->dev, "Failed to ioremap MP1 base address\n");
 		return -ENOMEM;
