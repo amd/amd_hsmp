@@ -15,7 +15,6 @@
 
 #include <linux/acpi.h>
 #include <linux/device.h>
-#include <linux/dev_printk.h>
 #include <linux/ioport.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -30,6 +29,10 @@
 #include <linux/kstrtox.h>
 #else
 #include <linux/kernel.h>
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
+#include <linux/dev_printk.h>
 #endif
 
 #define DRIVER_NAME		"amd_hsmp"
