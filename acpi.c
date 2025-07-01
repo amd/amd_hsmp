@@ -11,6 +11,7 @@
 
 #include <asm/amd_nb.h>
 #include <asm/topology.h>
+#include <asm-generic/errno-base.h>
 
 #include <linux/acpi.h>
 #include <linux/device.h>
@@ -20,9 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/sysfs.h>
 #include <linux/uuid.h>
-
-#include <uapi/asm-generic/errno-base.h>
-#include <generated/uapi/linux/version.h>
+#include <linux/version.h>
 
 #include "hsmp.h"
 #include "amd_hsmp.h"
