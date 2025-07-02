@@ -239,7 +239,11 @@ static int hsmp_parse_acpi_table(struct device *dev, u16 sock_ind)
 }
 
 static ssize_t hsmp_metric_tbl_acpi_read(struct file *filp, struct kobject *kobj,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
+					 const struct bin_attribute *bin_attr, char *buf,
+#else
 					 struct bin_attribute *bin_attr, char *buf,
+#endif
 					 loff_t off, size_t count)
 {
 	struct device *dev = container_of(kobj, struct device, kobj);
@@ -303,19 +307,40 @@ static int init_acpi(struct device *dev)
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
+static const struct bin_attribute  hsmp_metric_tbl_attr = {
+#else
 static struct bin_attribute  hsmp_metric_tbl_attr = {
+#endif
 	.attr = { .name = HSMP_METRICS_TABLE_NAME, .mode = 0444},
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
+	.read_new = hsmp_metric_tbl_acpi_read,
+#else
 	.read = hsmp_metric_tbl_acpi_read,
+#endif
 	.size = sizeof(struct hsmp_metric_table),
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
+static const struct bin_attribute *hsmp_attr_list[] = {
+#else
 static struct bin_attribute *hsmp_attr_list[] = {
+#endif
 	&hsmp_metric_tbl_attr,
 	NULL
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
+static const struct attribute_group hsmp_attr_grp = {
+#else
 static struct attribute_group hsmp_attr_grp = {
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
+	.bin_attrs_new = hsmp_attr_list,
+#else
 	.bin_attrs = hsmp_attr_list,
+#endif
+	.attrs = hsmp_dev_attr_list,
 	.is_bin_visible = hsmp_is_sock_attr_visible,
 };
 
