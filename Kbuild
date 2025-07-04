@@ -11,7 +11,7 @@
 hsmp_acpi-objs := acpi.o
 obj-m := hsmp_acpi.o
 
-hsmp_common-objs := hsmp.o
+hsmp_common-objs := hsmp.o hwmon.o
 obj-m += hsmp_common.o
 
 amd_hsmp-objs := plat.o
