@@ -469,6 +469,8 @@ struct hsmp_metric_table {
 /* Reset to default packing */
 #pragma pack()
 
+int hsmp_send_message(struct hsmp_message *msg);
+
 /* Define unique ioctl command for hsmp msgs using generic _IOWR */
 #define HSMP_BASE_IOCTL_NR	0xF8
 #define HSMP_IOCTL_CMD		_IOWR(HSMP_BASE_IOCTL_NR, 0, struct hsmp_message)

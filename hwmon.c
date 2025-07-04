@@ -7,8 +7,6 @@
  * This file provides hwmon implementation for HSMP interface.
  */
 
-#include <asm/amd_hsmp.h>
-
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/hwmon.h>
@@ -16,6 +14,7 @@
 #include <linux/units.h>
 
 #include "hsmp.h"
+#include "amd_hsmp.h"
 
 #define HSMP_HWMON_NAME		"amd_hsmp_hwmon"
 
