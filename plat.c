@@ -26,8 +26,6 @@
 #include "amd_hsmp.h"
 
 #define DRIVER_NAME		"amd_hsmp"
-#define DRIVER_VERSION		"2.4"
-
 
 /*
  * To access specific HSMP mailbox register, s/w writes the SMN address of HSMP mailbox

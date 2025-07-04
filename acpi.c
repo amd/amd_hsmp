@@ -41,7 +41,6 @@
 #endif
 
 #define DRIVER_NAME		"amd_hsmp"
-#define DRIVER_VERSION		"2.4"
 #define ACPI_HSMP_DEVICE_HID	"AMDI0097"
 
 /* These are the strings specified in ACPI table */
