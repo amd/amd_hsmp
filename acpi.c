@@ -40,8 +40,7 @@
 #include <linux/dev_printk.h>
 #endif
 
-#define DRIVER_NAME		"amd_hsmp"
-#define ACPI_HSMP_DEVICE_HID	"AMDI0097"
+#define DRIVER_NAME		"hsmp_acpi"
 
 /* These are the strings specified in ACPI table */
 #define MSG_IDOFF_STR		"MsgIdOffset"

@@ -16,6 +16,7 @@
 #include <asm/amd_nb.h>
 #endif
 
+#include <linux/acpi.h>
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/pci.h>
@@ -329,7 +330,7 @@ static bool legacy_hsmp_support(void)
 		}
 	case 0x1A:
 		switch (boot_cpu_data.x86_model) {
-		case 0x00 ... 0x1F:
+		case 0x00 ... 0x0F:
 			return true;
 		default:
 			return false;
@@ -350,6 +351,9 @@ static int __init hsmp_plt_init(void)
 			boot_cpu_data.x86, boot_cpu_data.x86_model);
 		return ret;
 	}
+
+	if (acpi_dev_present(ACPI_HSMP_DEVICE_HID, NULL, -1))
+		return -ENODEV;
 
 	hsmp_pdev = get_hsmp_pdev();
 	if (!hsmp_pdev)
