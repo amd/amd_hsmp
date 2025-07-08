@@ -20,7 +20,9 @@
 #include <asm-generic/errno-base.h>
 
 #include <linux/acpi.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
 #include <linux/array_size.h>
+#endif
 #include <linux/bits.h>
 #include <linux/bitfield.h>
 #include <linux/device.h>
