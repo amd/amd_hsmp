@@ -259,7 +259,11 @@ int hsmp_msg_get_nargs(u16 sock_ind, u32 msg_id, u32 *data, u8 num_args)
 
 	return 0;
 }
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_msg_get_nargs, "AMD_HSMP");
+#else
+EXPORT_SYMBOL_NS_GPL(hsmp_msg_get_nargs, AMD_HSMP);
+#endif
 
 int hsmp_test(u16 sock_ind, u32 value)
 {
