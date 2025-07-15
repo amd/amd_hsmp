@@ -9,7 +9,12 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+#include <asm/amd/nb.h>
+#else
 #include <asm/amd_nb.h>
+#endif
 
 #include <linux/device.h>
 #include <linux/module.h>
@@ -23,7 +28,6 @@
 #define DRIVER_NAME		"amd_hsmp"
 #define DRIVER_VERSION		"2.4"
 
-#include <generated/uapi/linux/version.h>
 
 /*
  * To access specific HSMP mailbox register, s/w writes the SMN address of HSMP mailbox
@@ -199,10 +203,12 @@ static int init_platform_device(struct device *dev)
 	int ret, i;
 
 	for (i = 0; i < hsmp_pdev->num_sockets; i++) {
+		sock = &hsmp_pdev->sock[i];
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0)
 		if (!node_to_amd_nb(i))
 			return -ENODEV;
-		sock = &hsmp_pdev->sock[i];
-		sock->root			= node_to_amd_nb(i)->root;
+		sock->root                      = node_to_amd_nb(i)->root;
+#endif
 		sock->sock_ind			= i;
 		sock->dev			= dev;
 		sock->mbinfo.base_addr		= SMN_HSMP_BASE;

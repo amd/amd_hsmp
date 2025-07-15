@@ -9,8 +9,13 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/version.h>
 #include <linux/acpi.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+#include <asm/amd/nb.h>
+#else
 #include <asm/amd_nb.h>
+#endif
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/semaphore.h>
@@ -19,8 +24,6 @@
 
 #include "hsmp.h"
 #include "amd_hsmp.h"  /* this will come from linux kernel as UAPI header */
-
-#include <generated/uapi/linux/version.h>
 
 /* HSMP Status / Error codes */
 #define HSMP_STATUS_NOT_READY		0x00

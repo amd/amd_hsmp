@@ -9,7 +9,13 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+#include <asm/amd/nb.h>
+#else
 #include <asm/amd_nb.h>
+#endif
 #include <asm/topology.h>
 #include <asm-generic/errno-base.h>
 
@@ -20,7 +26,6 @@
 #include <linux/platform_device.h>
 #include <linux/sysfs.h>
 #include <linux/uuid.h>
-#include <linux/version.h>
 
 #include "hsmp.h"
 #include "amd_hsmp.h"
