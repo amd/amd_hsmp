@@ -330,10 +330,10 @@ static int __init hsmp_plt_init(void)
 	 */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0)
 	hsmp_pdev->num_sockets = amd_nb_num();
-	if (hsmp_pdev->num_sockets == 0 || hsmp_pdev->num_sockets > MAX_AMD_SOCKETS)
+	if (hsmp_pdev->num_sockets == 0)
 #else
 	hsmp_pdev->num_sockets = amd_num_nodes();
-	if (hsmp_pdev->num_sockets == 0 || hsmp_pdev->num_sockets > MAX_AMD_NUM_NODES)
+	if (hsmp_pdev->num_sockets == 0)
 #endif
 		return ret;
 
