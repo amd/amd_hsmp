@@ -57,11 +57,12 @@ work with most kernel source trees.
 To build the kernel module:
 
 #> make
+This will generate hsmp_common.ko, hsmp_acpi.ko and amd_hsmp.ko modules.
 
 To install the kernel module:
 
 #> sudo make modules_install
-
+This will install hsmp modules at  /lib/modules/<KERNEL_VERSION>/build.
 To clean the kernel module build directory:
 
 #> make clean
@@ -70,15 +71,40 @@ To clean the kernel module build directory:
 Loading
 -------
 
-If the HSMP modules are installed in standard path you should use the modprobe command to
-load the module.
-
-To load hsmp modules on platforms with ACPI supported BIOS (Family 0x1A, model 0x00-0x1F and future platforms):
+Family 0x1A, model 0x00-0x1F and future platforms(new platforms):
+---------------------------------------------------
+If the HSMP module was installed using modules_install, you can use
+the modprobe command to load the module.
 #> sudo modprobe hsmp_acpi
 
-To load hsmp module on non-ACPI BIOS(Family 0x19, model 0x00-0x1F, 0x30-0x3F, 0x90-0x9F, 0xA0-0xAF):
-#> sudo modprobe amd_hsmp
+To remove driver
+#> sudo modprobe -r hsmp_acpi
 
+If module is not installed, use insmod to load from current directory.
+#> sudo insmod ./hsmp_common.ko
+#> sudo insmod ./hsmp_acpi.ko
+
+To remove Driver
+#> sudo rmmod hsmp_acpi
+#> sudo rmmod hsmp_common
+
+
+Family 0x19, model 0x00-0x1F, 0x30-0x3F, 0x90-0x9F, 0xA0-0xAF(old platforms)
+--------------------------------------------------------------------------
+If the HSMP module was installed using modules_install, you can use
+the modprobe command to load the module.
+#> sudo modprobe -r amd_hsmp
+
+To remove driver
+#> sudo modprobe -r amd_hsmp
+
+If module is not installed, use insmod to load from current directory.
+#> sudo insmod ./amd_hsmp.ko
+#> sudo insmod ./hsmp_common.ko
+
+To remove Driver
+#> sudo rmmod amd_hsmp
+#> sudo rmmod hsmp_common
 
 DKMS support
 ------------
