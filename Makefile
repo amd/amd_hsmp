@@ -14,6 +14,7 @@ KDIR ?= /lib/modules/`uname -r`/build
 
 default:
 	$(MAKE) -C $(KDIR) M=$$PWD modules
+	$(MAKE) controller
 
 debug:
 	$(MAKE) CFLAGS_MODULE=-DDEBUG -C $(KDIR) M=$$PWD modules
@@ -25,6 +26,10 @@ modules_install:
 
 clean:
 	$(MAKE) -C $(KDIR) M=$$PWD clean
+	rm amd_uncore_controller
+
+controller:
+	gcc -o amd_uncore_controller controller.c
 
 help:
 	@echo "\nThe following make targets are supported:\n"
