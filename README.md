@@ -71,7 +71,7 @@ To clean the kernel module build directory:
 Loading
 -------
 
-Family 0x1A, model 0x00-0x1F and future platforms(new platforms):
+Family 0x1A, model 0x00-0x1F, model 0x50-0x5F and future platforms(new platforms):
 ---------------------------------------------------
 If the HSMP module was installed using modules_install, you can use
 the modprobe command to load the module.

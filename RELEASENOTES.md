@@ -4,6 +4,10 @@ HSMP driver provides user interface to system management features.
 
 # Changes Notes
 
+## Highlights of release tag 3.0 [September 1, 2025]
+* Family 0x1A model 0x50-0x5f is supported
+* HSMP is made compilable on linux kernel version 5.4 till 6.16
+
 ## Highlights of release tag 2.0 [July 15, 2025]
 *  HSMP is made compilable for different versions of Kernel(5.10 to 6.16)
 *  README is updated
