@@ -368,7 +368,7 @@ static int __init hsmp_plt_init(void)
 	 * amd_nb_num() returns number of SMN/DF interfaces present in the system
 	 * if we have N SMN/DF interfaces that ideally means N sockets
 	 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 14, 0)
 	hsmp_pdev->num_sockets = amd_nb_num();
 	if (hsmp_pdev->num_sockets == 0)
 #else

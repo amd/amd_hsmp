@@ -11,8 +11,10 @@
 #include <linux/err.h>
 #include <linux/hwmon.h>
 #include <linux/types.h>
-#include <linux/units.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+#include <linux/units.h>
+#endif
 
 #include "hsmp.h"
 #include "amd_hsmp.h"

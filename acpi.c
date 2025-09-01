@@ -692,7 +692,7 @@ static struct platform_driver amd_hsmp_driver = {
 
 module_platform_driver(amd_hsmp_driver);
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 MODULE_IMPORT_NS("AMD_HSMP");
 #else
 MODULE_IMPORT_NS(AMD_HSMP);

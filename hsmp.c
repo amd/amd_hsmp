@@ -232,7 +232,7 @@ int hsmp_send_message(struct hsmp_message *msg)
 
 	return ret;
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_send_message, "AMD_HSMP");
 #else
 EXPORT_SYMBOL_NS_GPL(hsmp_send_message, AMD_HSMP);
@@ -259,7 +259,7 @@ int hsmp_msg_get_nargs(u16 sock_ind, u32 msg_id, u32 *data, u8 num_args)
 
 	return 0;
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_msg_get_nargs, "AMD_HSMP");
 #else
 EXPORT_SYMBOL_NS_GPL(hsmp_msg_get_nargs, AMD_HSMP);
@@ -294,7 +294,7 @@ int hsmp_test(u16 sock_ind, u32 value)
 
 	return ret;
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_test, "AMD_HSMP");
 #else
 EXPORT_SYMBOL_NS_GPL(hsmp_test, AMD_HSMP);
@@ -392,7 +392,7 @@ ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size)
 
 	return size;
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_metric_tbl_read, "AMD_HSMP");
 #else
 EXPORT_SYMBOL_NS_GPL(hsmp_metric_tbl_read, AMD_HSMP);
@@ -430,7 +430,7 @@ int hsmp_get_tbl_dram_base(u16 sock_ind)
 	}
 	return 0;
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_get_tbl_dram_base, "AMD_HSMP");
 #else
 EXPORT_SYMBOL_NS_GPL(hsmp_get_tbl_dram_base, AMD_HSMP);
@@ -451,7 +451,7 @@ int hsmp_cache_proto_ver(u16 sock_ind)
 
 	return ret;
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_cache_proto_ver, "AMD_HSMP");
 #else
 EXPORT_SYMBOL_NS_GPL(hsmp_cache_proto_ver, AMD_HSMP);
@@ -474,7 +474,7 @@ int hsmp_misc_register(struct device *dev)
 
 	return misc_register(&hsmp_pdev.mdev);
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_misc_register, "AMD_HSMP");
 #else
 EXPORT_SYMBOL_NS_GPL(hsmp_misc_register, AMD_HSMP);
@@ -484,7 +484,7 @@ void hsmp_misc_deregister(void)
 {
 	misc_deregister(&hsmp_pdev.mdev);
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_misc_deregister, "AMD_HSMP");
 #else
 EXPORT_SYMBOL_NS_GPL(hsmp_misc_deregister, AMD_HSMP);
