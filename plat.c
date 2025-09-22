@@ -102,6 +102,9 @@ static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
 	if (id == 0 && sock_ind >= hsmp_pdev->num_sockets)
 		return SYSFS_GROUP_INVISIBLE;
+#else
+	if (id == 0 && sock_ind >= hsmp_pdev->num_sockets)
+		return 0;
 #endif
 
 	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6)
@@ -272,7 +275,14 @@ static int hsmp_pltdrv_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	return hsmp_misc_register(&pdev->dev);
+	ret = hsmp_misc_register(&pdev->dev);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to register misc device\n");
+		return ret;
+	}
+
+	dev_dbg(&pdev->dev, "AMD HSMP is probed successfully\n");
+	return 0;
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 1)
@@ -351,8 +361,16 @@ static int __init hsmp_plt_init(void)
 {
 	int ret = -ENODEV;
 
+	if (acpi_dev_present(ACPI_HSMP_DEVICE_HID, NULL, -1)) {
+		if (IS_ENABLED(CONFIG_AMD_HSMP_ACPI))
+			pr_debug("HSMP is supported through ACPI on this platform, please use hsmp_acpi.ko\n");
+		else
+			pr_info("HSMP is supported through ACPI on this platform, please enable AMD_HSMP_ACPI config\n");
+		return -ENODEV;
+	}
+
 	if (!legacy_hsmp_support()) {
-		pr_info("HSMP is not supported on Family:%x model:%x\n",
+		pr_info("HSMP interface is either disabled or not supported on family:%x model:%x\n",
 			boot_cpu_data.x86, boot_cpu_data.x86_model);
 		return ret;
 	}
@@ -370,12 +388,13 @@ static int __init hsmp_plt_init(void)
 	 */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 14, 0)
 	hsmp_pdev->num_sockets = amd_nb_num();
-	if (hsmp_pdev->num_sockets == 0)
 #else
 	hsmp_pdev->num_sockets = amd_num_nodes();
-	if (hsmp_pdev->num_sockets == 0)
 #endif
+	if (!hsmp_pdev->num_sockets) {
+		pr_err("No CPU sockets detected\n");
 		return ret;
+	}
 
 	ret = platform_driver_register(&amd_hsmp_driver);
 	if (ret)

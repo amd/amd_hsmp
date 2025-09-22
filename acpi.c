@@ -299,7 +299,11 @@ static ssize_t hsmp_msg_resp32_show(struct device *dev, struct device_attribute 
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%u\n", data);
+#else
+	return sprintf(buf, "%u\n", data);
+#endif
 }
 
 #define DDR_MAX_BW_MASK		GENMASK(31, 20)
@@ -325,7 +329,11 @@ static ssize_t hsmp_ddr_max_bw_show(struct device *dev, struct device_attribute 
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%lu\n", FIELD_GET(DDR_MAX_BW_MASK, data));
+#else
+	return sprintf(buf, "%lu\n", FIELD_GET(DDR_MAX_BW_MASK, data));
+#endif
 }
 
 static ssize_t hsmp_ddr_util_bw_show(struct device *dev, struct device_attribute *attr,
@@ -340,7 +348,11 @@ static ssize_t hsmp_ddr_util_bw_show(struct device *dev, struct device_attribute
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%lu\n", FIELD_GET(DDR_UTIL_BW_MASK, data));
+#else
+	return sprintf(buf, "%lu\n", FIELD_GET(DDR_UTIL_BW_MASK, data));
+#endif
 }
 
 static ssize_t hsmp_ddr_util_bw_perc_show(struct device *dev, struct device_attribute *attr,
@@ -355,7 +367,11 @@ static ssize_t hsmp_ddr_util_bw_perc_show(struct device *dev, struct device_attr
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%lu\n", FIELD_GET(DDR_UTIL_BW_PERC_MASK, data));
+#else
+	return sprintf(buf, "%lu\n", FIELD_GET(DDR_UTIL_BW_PERC_MASK, data));
+#endif
 }
 
 static ssize_t hsmp_msg_fw_ver_show(struct device *dev, struct device_attribute *attr,
@@ -370,10 +386,17 @@ static ssize_t hsmp_msg_fw_ver_show(struct device *dev, struct device_attribute 
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%lu.%lu.%lu\n",
 			  FIELD_GET(FW_VER_MAJOR_MASK, data),
 			  FIELD_GET(FW_VER_MINOR_MASK, data),
 			  FIELD_GET(FW_VER_DEBUG_MASK, data));
+#else
+       return sprintf(buf, "%lu.%lu.%lu\n",
+			FIELD_GET(FW_VER_MAJOR_MASK, data),
+			FIELD_GET(FW_VER_MINOR_MASK, data),
+			FIELD_GET(FW_VER_DEBUG_MASK, data));
+#endif
 }
 
 static ssize_t hsmp_fclk_show(struct device *dev, struct device_attribute *attr,
@@ -388,7 +411,11 @@ static ssize_t hsmp_fclk_show(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%u\n", data[0]);
+#else
+	return sprintf(buf, "%u\n", data[0]);
+#endif
 }
 
 static ssize_t hsmp_mclk_show(struct device *dev, struct device_attribute *attr,
@@ -403,7 +430,11 @@ static ssize_t hsmp_mclk_show(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%u\n", data[1]);
+#else
+	return sprintf(buf, "%u\n", data[1]);
+#endif
 }
 
 static ssize_t hsmp_clk_fmax_show(struct device *dev, struct device_attribute *attr,
@@ -418,7 +449,11 @@ static ssize_t hsmp_clk_fmax_show(struct device *dev, struct device_attribute *a
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%lu\n", FIELD_GET(FMAX_MASK, data));
+#else
+	return sprintf(buf, "%lu\n", FIELD_GET(FMAX_MASK, data));
+#endif
 }
 
 static ssize_t hsmp_clk_fmin_show(struct device *dev, struct device_attribute *attr,
@@ -433,7 +468,11 @@ static ssize_t hsmp_clk_fmin_show(struct device *dev, struct device_attribute *a
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%lu\n", FIELD_GET(FMIN_MASK, data));
+#else
+	return sprintf(buf, "%lu\n", FIELD_GET(FMIN_MASK, data));
+#endif
 }
 
 static ssize_t hsmp_freq_limit_show(struct device *dev, struct device_attribute *attr,
@@ -448,7 +487,11 @@ static ssize_t hsmp_freq_limit_show(struct device *dev, struct device_attribute 
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	return sysfs_emit(buf, "%lu\n", FIELD_GET(FREQ_LIMIT_MASK, data));
+#else
+	return sprintf(buf, "%lu\n", FIELD_GET(FREQ_LIMIT_MASK, data));
+#endif
 }
 
 static const char * const freqlimit_srcnames[] = {
@@ -482,7 +525,11 @@ static ssize_t hsmp_freq_limit_source_show(struct device *dev, struct device_att
 		if (!src_ind)
 			break;
 		if (src_ind & 1)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 			len += sysfs_emit_at(buf, len, "%s\n", freqlimit_srcnames[index]);
+#else
+			len += scnprintf(buf, len, "%s\n", freqlimit_srcnames[index]);
+#endif
 		src_ind >>= 1;
 	}
 	return len;
@@ -635,8 +682,10 @@ static int hsmp_acpi_probe(struct platform_device *pdev)
 
 	if (!hsmp_pdev->is_probed) {
 		hsmp_pdev->num_sockets = topology_max_packages();
-		if (hsmp_pdev->num_sockets == 0)
+		if (!hsmp_pdev->num_sockets) {
+			dev_err(&pdev->dev, "No CPU sockets detected\n");
 			return -ENODEV;
+		}
 
 		hsmp_pdev->sock = devm_kcalloc(&pdev->dev, hsmp_pdev->num_sockets,
 					       sizeof(*hsmp_pdev->sock),
@@ -653,9 +702,12 @@ static int hsmp_acpi_probe(struct platform_device *pdev)
 
 	if (!hsmp_pdev->is_probed) {
 		ret = hsmp_misc_register(&pdev->dev);
-		if (ret)
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to register misc device\n");
 			return ret;
+		}
 		hsmp_pdev->is_probed = true;
+		dev_dbg(&pdev->dev, "AMD HSMP ACPI is probed successfully\n");
 	}
 
 	return 0;

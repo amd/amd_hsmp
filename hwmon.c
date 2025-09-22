@@ -135,7 +135,7 @@ int hsmp_create_sensor(struct device *dev, u16 sock_ind)
 							 NULL);
 	return PTR_ERR_OR_ZERO(hwmon_dev);
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS(hsmp_create_sensor, "AMD_HSMP");
 #else
 EXPORT_SYMBOL_NS(hsmp_create_sensor, AMD_HSMP);
