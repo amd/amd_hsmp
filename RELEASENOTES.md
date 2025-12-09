@@ -4,6 +4,14 @@ HSMP driver provides user interface to system management features.
 
 # Changes Notes
 
+## Highlights of release tag 4.0 [December 9, 2025]
+* Family 0x1A model 0x50-0x5f is additional supported for,
+   * Get FloorLimit/EffectiveFloorLimit per Core/Socket
+   * Set FloorLimit Core/Socket
+   * Get HSMP Enabled Commands
+   * Get/Set SDPS Limit
+   * Get/Set Dimm SPD
+
 ## Highlights of release tag 3.0 [September 1, 2025]
 * Family 0x1A model 0x50-0x5f is supported
 * HSMP is made compilable on linux kernel version 5.4 till 6.16

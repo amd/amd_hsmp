@@ -25,7 +25,7 @@ CPUs. Using the amd_hsmp module on earlier CPUs could produce unexpected
 results, and may cause the processor to operate outside of your motherboard
 or system specifications. Correspondingly, defaults to only executing on
 AMD Family 19h Model 0 ~ Fh, 10h ~ 1Fh, 30h ~ 3Fh, & A0 ~ AFh,
-family 1Ah Model 0 ~ 1fh EPYC processors and family 19h model 90 ~ 9fh
+family 1Ah Model 0 ~ 1Fh, 50 ~ 5F EPYC processors and family 19h model 90 ~ 9Fh
 MI300A processors.
 
 
@@ -99,8 +99,8 @@ To remove driver
 #> sudo modprobe -r amd_hsmp
 
 If module is not installed, use insmod to load from current directory.
-#> sudo insmod ./amd_hsmp.ko
 #> sudo insmod ./hsmp_common.ko
+#> sudo insmod ./amd_hsmp.ko
 
 To remove Driver
 #> sudo rmmod amd_hsmp
