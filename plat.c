@@ -84,7 +84,7 @@ static ssize_t hsmp_metric_tbl_plat_read(struct file *filp, struct kobject *kobj
 
 	sock = &hsmp_pdev->sock[sock_ind];
 
-	return hsmp_metric_tbl_read(sock, buf, count);
+	return hsmp_metric_tbl_read(sock, buf, count, off);
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
@@ -137,7 +137,6 @@ static struct bin_attribute attr##index = {				\
 	.attr = { .name = HSMP_METRICS_TABLE_NAME, .mode = 0444},	\
 	.private = (void *)index,					\
 	.read = hsmp_metric_tbl_plat_read,				\
-	.size = sizeof(struct hsmp_metric_table),			\
 };									\
 static struct bin_attribute _list[] = {					\
 	&attr##index,							\

@@ -262,7 +262,7 @@ static ssize_t hsmp_metric_tbl_acpi_read(struct file *filp, struct kobject *kobj
 	struct device *dev = container_of(kobj, struct device, kobj);
 	struct hsmp_socket *sock = dev_get_drvdata(dev);
 
-	return hsmp_metric_tbl_read(sock, buf, count);
+	return hsmp_metric_tbl_read(sock, buf, count, off);
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
@@ -273,7 +273,8 @@ static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
 					 struct bin_attribute *battr, int id)
 #endif
 {
-	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6)
+	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6 ||
+	    hsmp_pdev->proto_ver == HSMP_PROTO_VER7)
 		return battr->attr.mode;
 
 	return 0;
@@ -567,7 +568,8 @@ static int init_acpi(struct device *dev)
 		return ret;
 	}
 
-	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6) {
+	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6 ||
+	    hsmp_pdev->proto_ver == HSMP_PROTO_VER7) {
 		ret = hsmp_get_tbl_dram_base(sock_ind);
 		if (ret)
 			dev_err(dev, "Failed to init metric table\n");
@@ -593,7 +595,6 @@ static struct bin_attribute  hsmp_metric_tbl_attr = {
 #else
 	.read = hsmp_metric_tbl_acpi_read,
 #endif
-	.size = sizeof(struct hsmp_metric_table),
 };
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
