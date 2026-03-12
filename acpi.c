@@ -584,24 +584,12 @@ static int init_acpi(struct device *dev)
 	return ret;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-static const struct bin_attribute  hsmp_metric_tbl_attr = {
-#else
-static struct bin_attribute  hsmp_metric_tbl_attr = {
-#endif
+static HSMP_CONST struct bin_attribute hsmp_metric_tbl_attr = {
 	.attr = { .name = HSMP_METRICS_TABLE_NAME, .mode = 0444},
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-	.read_new = hsmp_metric_tbl_acpi_read,
-#else
-	.read = hsmp_metric_tbl_acpi_read,
-#endif
+	HSMP_BIN_READ = hsmp_metric_tbl_acpi_read,
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-static const struct bin_attribute *hsmp_attr_list[] = {
-#else
-static struct bin_attribute *hsmp_attr_list[] = {
-#endif
+static HSMP_CONST struct bin_attribute *hsmp_attr_list[] = {
 	&hsmp_metric_tbl_attr,
 	NULL
 };
@@ -647,16 +635,8 @@ static struct attribute *hsmp_dev_attr_list[] = {
 	NULL
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-static const struct attribute_group hsmp_attr_grp = {
-#else
-static struct attribute_group hsmp_attr_grp = {
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-	.bin_attrs_new = hsmp_attr_list,
-#else
-	.bin_attrs = hsmp_attr_list,
-#endif
+static HSMP_CONST struct attribute_group hsmp_attr_grp = {
+	HSMP_BIN_ATTRS_FIELD = hsmp_attr_list,
 	.attrs = hsmp_dev_attr_list,
 	.is_bin_visible = hsmp_is_sock_attr_visible,
 	.is_visible = hsmp_is_sock_dev_attr_visible,

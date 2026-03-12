@@ -119,30 +119,18 @@ static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
  * to create sysfs groups for sockets.
  * is_bin_visible function is used to show / hide the necessary groups.
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
 #define HSMP_BIN_ATTR(index, _list)					\
-static const struct bin_attribute attr##index = {			\
+static HSMP_CONST struct bin_attribute attr##index = {			\
 	.attr = { .name = HSMP_METRICS_TABLE_NAME, .mode = 0444},	\
 	.private = (void *)index,					\
-	.read_new = hsmp_metric_tbl_plat_read,				\
+	HSMP_BIN_READ = hsmp_metric_tbl_plat_read,			\
 	.size = sizeof(struct hsmp_metric_table),			\
 };									\
-static const struct bin_attribute _list[] = {					\
+static HSMP_CONST struct bin_attribute _list[] = {			\
 	&attr##index,							\
 	NULL								\
 }
-#else
-#define HSMP_BIN_ATTR(index, _list)					\
-static struct bin_attribute attr##index = {				\
-	.attr = { .name = HSMP_METRICS_TABLE_NAME, .mode = 0444},	\
-	.private = (void *)index,					\
-	.read = hsmp_metric_tbl_plat_read,				\
-};									\
-static struct bin_attribute _list[] = {					\
-	&attr##index,							\
-	NULL								\
-}
-#endif
+
 HSMP_BIN_ATTR(0, *sock0_attr_list);
 HSMP_BIN_ATTR(1, *sock1_attr_list);
 HSMP_BIN_ATTR(2, *sock2_attr_list);
@@ -153,21 +141,12 @@ HSMP_BIN_ATTR(6, *sock6_attr_list);
 HSMP_BIN_ATTR(7, *sock7_attr_list);
 
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-#define HSMP_BIN_ATTR_GRP(index, _list, _name)					\
-static const struct attribute_group sock##index##_attr_grp = {		\
-	.bin_attrs_new = _list,					\
+#define HSMP_BIN_ATTR_GRP(index, _list, _name)				\
+static HSMP_CONST struct attribute_group sock##index##_attr_grp = {	\
+	HSMP_BIN_ATTRS_FIELD = _list,					\
 	.is_bin_visible = hsmp_is_sock_attr_visible,			\
-	.name = #_name,				\
+	.name = #_name,						\
 }
-#else
-#define HSMP_BIN_ATTR_GRP(index, _list, _name)					\
-static struct attribute_group sock##index##_attr_grp = {		\
-	.bin_attrs = _list,					\
-	.is_bin_visible = hsmp_is_sock_attr_visible,			\
-	.name = #_name,				\
-}
-#endif
 
 HSMP_BIN_ATTR_GRP(0, sock0_attr_list, socket0);
 HSMP_BIN_ATTR_GRP(1, sock1_attr_list, socket1);
