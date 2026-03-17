@@ -262,7 +262,7 @@ static ssize_t hsmp_metric_tbl_acpi_read(struct file *filp, struct kobject *kobj
 	struct device *dev = container_of(kobj, struct device, kobj);
 	struct hsmp_socket *sock = dev_get_drvdata(dev);
 
-	return hsmp_metric_tbl_read(sock, buf, count);
+	return hsmp_metric_tbl_read(sock, buf, count, off);
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
@@ -273,7 +273,8 @@ static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
 					 struct bin_attribute *battr, int id)
 #endif
 {
-	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6)
+	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6 ||
+	    hsmp_pdev->proto_ver == HSMP_PROTO_VER7)
 		return battr->attr.mode;
 
 	return 0;
@@ -567,7 +568,8 @@ static int init_acpi(struct device *dev)
 		return ret;
 	}
 
-	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6) {
+	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6 ||
+	    hsmp_pdev->proto_ver == HSMP_PROTO_VER7) {
 		ret = hsmp_get_tbl_dram_base(sock_ind);
 		if (ret)
 			dev_err(dev, "Failed to init metric table\n");
@@ -582,25 +584,12 @@ static int init_acpi(struct device *dev)
 	return ret;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-static const struct bin_attribute  hsmp_metric_tbl_attr = {
-#else
-static struct bin_attribute  hsmp_metric_tbl_attr = {
-#endif
+static HSMP_CONST struct bin_attribute hsmp_metric_tbl_attr = {
 	.attr = { .name = HSMP_METRICS_TABLE_NAME, .mode = 0444},
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-	.read_new = hsmp_metric_tbl_acpi_read,
-#else
-	.read = hsmp_metric_tbl_acpi_read,
-#endif
-	.size = sizeof(struct hsmp_metric_table),
+	HSMP_BIN_READ = hsmp_metric_tbl_acpi_read,
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-static const struct bin_attribute *hsmp_attr_list[] = {
-#else
-static struct bin_attribute *hsmp_attr_list[] = {
-#endif
+static HSMP_CONST struct bin_attribute *hsmp_attr_list[] = {
 	&hsmp_metric_tbl_attr,
 	NULL
 };
@@ -646,16 +635,8 @@ static struct attribute *hsmp_dev_attr_list[] = {
 	NULL
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-static const struct attribute_group hsmp_attr_grp = {
-#else
-static struct attribute_group hsmp_attr_grp = {
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
-	.bin_attrs_new = hsmp_attr_list,
-#else
-	.bin_attrs = hsmp_attr_list,
-#endif
+static HSMP_CONST struct attribute_group hsmp_attr_grp = {
+	HSMP_BIN_ATTRS_FIELD = hsmp_attr_list,
 	.attrs = hsmp_dev_attr_list,
 	.is_bin_visible = hsmp_is_sock_attr_visible,
 	.is_visible = hsmp_is_sock_dev_attr_visible,

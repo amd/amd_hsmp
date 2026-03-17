@@ -19,6 +19,26 @@
 #include <linux/semaphore.h>
 #include <linux/sysfs.h>
 
+/*
+ * Helper macros to handle API changes across kernel versions:
+ * - Kernels >= 6.14.0: bin_attribute and attribute_group become const
+ * - Kernels 6.14.0 to 6.17.x: use .read_new and .bin_attrs_new
+ * - Kernels < 6.14.0 and >= 6.18.0: use .read and .bin_attrs
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
+#define HSMP_CONST		const
+#else
+#define HSMP_CONST
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 18, 0)
+#define HSMP_BIN_READ		.read_new
+#define HSMP_BIN_ATTRS_FIELD	.bin_attrs_new
+#else
+#define HSMP_BIN_READ		.read
+#define HSMP_BIN_ATTRS_FIELD	.bin_attrs
+#endif
+
 #define HSMP_METRICS_TABLE_NAME	"metrics_bin"
 
 #define HSMP_ATTR_GRP_NAME_SIZE	10
@@ -58,6 +78,7 @@ struct hsmp_plat_device {
 	u32 proto_ver;
 	u16 num_sockets;
 	bool is_probed;
+	size_t hsmp_table_size;
 };
 
 int hsmp_cache_proto_ver(u16 sock_ind);
@@ -66,7 +87,7 @@ long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg);
 void hsmp_misc_deregister(void);
 int hsmp_misc_register(struct device *dev);
 int hsmp_get_tbl_dram_base(u16 sock_ind);
-ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size);
+ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size, loff_t off);
 struct hsmp_plat_device *get_hsmp_pdev(void);
 #if IS_ENABLED(CONFIG_HWMON)
 int hsmp_create_sensor(struct device *dev, u16 sock_ind);

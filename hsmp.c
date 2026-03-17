@@ -368,29 +368,48 @@ long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	return 0;
 }
 
-ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size)
+/**
+ * hsmp_metric_tbl_read - Read metric table
+ *
+ * This function maintains ABI compatibility for external consumers.
+ * It reads from offset 0, which works for all metrics table formats.
+ * External modules using this function will continue to work without
+ * modification.
+ *
+ * Return: number of bytes read or negative error code
+ */
+
+ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf,
+			     size_t size, loff_t off)
 {
 	struct hsmp_message msg = { 0 };
+	size_t var_size, remaining;
 	int ret;
 
 	if (!sock || !buf)
 		return -EINVAL;
 
-	/* Do not support lseek(), also don't allow more than the size of metric table */
-	if (size != sizeof(struct hsmp_metric_table)) {
-		dev_err(sock->dev, "Wrong buffer size\n");
+	if (off < 0 || off > hsmp_pdev.hsmp_table_size) {
+		dev_err(sock->dev, "Invalid offset\n");
 		return -EINVAL;
 	}
 
-	msg.msg_id	= HSMP_GET_METRIC_TABLE;
-	msg.sock_ind	= sock->sock_ind;
+	/* Compute remaining bytes using explicit cast to avoid signed/unsigned mixing */
+	remaining = hsmp_pdev.hsmp_table_size - (size_t)off;
+	var_size = min_t(size_t, size, remaining);
+	if (off == 0) {
+		msg.msg_id	= HSMP_GET_METRIC_TABLE;
+		msg.sock_ind	= sock->sock_ind;
 
-	ret = hsmp_send_message(&msg);
-	if (ret)
+		ret = hsmp_send_message(&msg);
+		if (ret) {
+			dev_err(sock->dev, "Failed to send HSMP_GET_METRIC_TABLE, ret: %d\n", ret);
 		return ret;
-	memcpy_fromio(buf, sock->metric_tbl_addr, size);
+		}
+	}
+	memcpy_fromio(buf, (u8 __iomem *)sock->metric_tbl_addr + off, var_size);
 
-	return size;
+	return var_size;
 }
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_metric_tbl_read, "AMD_HSMP");
@@ -401,8 +420,10 @@ EXPORT_SYMBOL_NS_GPL(hsmp_metric_tbl_read, AMD_HSMP);
 int hsmp_get_tbl_dram_base(u16 sock_ind)
 {
 	struct hsmp_socket *sock = &hsmp_pdev.sock[sock_ind];
+	struct hsmp_message msg_tbl_ver = { 0 };
 	struct hsmp_message msg = { 0 };
 	phys_addr_t dram_addr;
+	u32 table_ver;
 	int ret;
 
 	msg.sock_ind	= sock_ind;
@@ -422,8 +443,44 @@ int hsmp_get_tbl_dram_base(u16 sock_ind)
 		dev_err(sock->dev, "Invalid DRAM address for metric table\n");
 		return -ENOMEM;
 	}
-	sock->metric_tbl_addr = devm_ioremap(sock->dev, dram_addr,
-					     sizeof(struct hsmp_metric_table));
+
+	/* Get metric table version */
+	msg_tbl_ver.sock_ind    = sock_ind;
+	msg_tbl_ver.response_sz = hsmp_msg_desc_table[HSMP_GET_METRIC_TABLE_VER].response_sz;
+	msg_tbl_ver.msg_id      = HSMP_GET_METRIC_TABLE_VER;
+
+	ret = hsmp_send_message(&msg_tbl_ver);
+	if (ret)
+		return ret;
+
+	table_ver = msg_tbl_ver.args[0];
+
+	hsmp_pdev.hsmp_table_size = 0;
+	/* Determine metric table size based on CPU family/model and table version */
+	switch (boot_cpu_data.x86) {
+	case 0x1A:
+		if (boot_cpu_data.x86_model >= 0x50 &&
+		    boot_cpu_data.x86_model <= 0x5F &&
+		    table_ver == 0x00700000) {
+			hsmp_pdev.hsmp_table_size = sizeof(struct hsmp_metric_table_f1a_m50_5f);
+		}
+		break;
+	case 0x19:
+		if (boot_cpu_data.x86_model >= 0x90 &&
+		    boot_cpu_data.x86_model <= 0x9F) {
+			hsmp_pdev.hsmp_table_size = sizeof(struct hsmp_metric_table);
+		}
+		break;
+	}
+
+	if (!hsmp_pdev.hsmp_table_size) {
+		dev_err(sock->dev,
+			"Metric table not supported for F%02Xh_M%02Xh (table version: 0x%08X)\n",
+			boot_cpu_data.x86, boot_cpu_data.x86_model, table_ver);
+		return -EOPNOTSUPP;
+	}
+
+	sock->metric_tbl_addr = devm_ioremap(sock->dev, dram_addr, hsmp_pdev.hsmp_table_size);
 	if (!sock->metric_tbl_addr) {
 		dev_err(sock->dev, "Failed to ioremap metric table addr\n");
 		return -ENOMEM;
