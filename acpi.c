@@ -273,8 +273,7 @@ static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
 					 struct bin_attribute *battr, int id)
 #endif
 {
-	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6 ||
-	    hsmp_pdev->proto_ver == HSMP_PROTO_VER7)
+	if (hsmp_pdev->proto_ver >= HSMP_PROTO_VER6)
 		return battr->attr.mode;
 
 	return 0;
@@ -568,8 +567,7 @@ static int init_acpi(struct device *dev)
 		return ret;
 	}
 
-	if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6 ||
-	    hsmp_pdev->proto_ver == HSMP_PROTO_VER7) {
+	if (hsmp_pdev->proto_ver >= HSMP_PROTO_VER6) {
 		ret = hsmp_get_tbl_dram_base(sock_ind);
 		if (ret)
 			dev_err(dev, "Failed to init metric table\n");
