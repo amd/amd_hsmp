@@ -66,6 +66,8 @@ enum hsmp_message_ids {
 	HSMP_SET_GET_FLOOR_LIMIT,       /* 38h Get/Set supported Floor Limit commands */
 	HSMP_DIMM_SB_WR,                /* 39h Set data to a specified device on the DIMM.*/
 	HSMP_SDPS_LIMIT,                /* 3Ah Get/Set SDPSLimit. */
+	HSMP_PQOS_TRAFFIC_PRIORITY,	/* 3Bh Get/Set traffic priority */
+	HSMP_PQOS_FLOATING_BW,		/* 3Ch Get/Set floating bandwidth */
 	HSMP_MSG_ID_MAX,
 };
 
@@ -501,6 +503,29 @@ static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
 	 *                   [30:00] SDPS Limit
 	 */
 	 {1, 1, HSMP_SET_GET},
+
+	 /*
+	 * HSMP_PQOS_TRAFFIC_PRIORITY, num_args = 1, response_sz = 1
+	 * input: args[0] =
+	 *                  [31:30] Operation
+	 *                  [27:26] Priority selector
+	 *                  [21:20] Priority value
+	 *                  [19:0]  Input
+	 * output: args[0] = Supported priorities or Priority val[1:0]
+	 */
+	{1, 1, HSMP_SET_GET},
+
+	/*
+	 * HSMP_PQOS_FLOATING_BW, num_args = 1, response_sz = 2
+	 * input: args[0] =
+	 *                  [31]    Operation
+	 *                  [30:29] Sub-operation
+	 *                  [28:0]  Parameter
+	 * output: args[0] = Discovery bits or Floating/Global memory BW (Gbps)
+	 * output: args[1] = Reserved or
+	 *                   config (drop adjustment, sampling delay, hysteresis)
+	 */
+	{1, 2, HSMP_SET_GET},
 };
 
 /* Metrics table (supported only with proto version 6) */
