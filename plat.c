@@ -17,10 +17,12 @@
 #endif
 
 #include <linux/acpi.h>
+#include <linux/build_bug.h>
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/platform_device.h>
+#include <linux/rwsem.h>
 #include <linux/sysfs.h>
 
 #include "hsmp.h"
@@ -84,7 +86,7 @@ static ssize_t hsmp_metric_tbl_plat_read(struct file *filp, struct kobject *kobj
 
 	sock = &hsmp_pdev->sock[sock_ind];
 
-	return hsmp_metric_tbl_read(sock, buf, count, off);
+	return hsmp_metric_tbl_read(sock, buf, count);
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
@@ -118,7 +120,12 @@ static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
  * Static array of 8 + 1(for NULL) elements is created below
  * to create sysfs groups for sockets.
  * is_bin_visible function is used to show / hide the necessary groups.
+ *
+ * Validate the maximum number against MAX_AMD_SOCKETS. If this changes,
+ * then the attributes and groups below must be adjusted.
  */
+static_assert(MAX_AMD_SOCKETS == 8);
+
 #define HSMP_BIN_ATTR(index, _list)					\
 static HSMP_CONST struct bin_attribute attr##index = {			\
 	.attr = { .name = HSMP_METRICS_TABLE_NAME, .mode = 0444},	\
@@ -140,12 +147,11 @@ HSMP_BIN_ATTR(5, *sock5_attr_list);
 HSMP_BIN_ATTR(6, *sock6_attr_list);
 HSMP_BIN_ATTR(7, *sock7_attr_list);
 
-
 #define HSMP_BIN_ATTR_GRP(index, _list, _name)				\
 static HSMP_CONST struct attribute_group sock##index##_attr_grp = {	\
 	HSMP_BIN_ATTRS_FIELD = _list,					\
 	.is_bin_visible = hsmp_is_sock_attr_visible,			\
-	.name = #_name,						\
+	.name = #_name,							\
 }
 
 HSMP_BIN_ATTR_GRP(0, sock0_attr_list, socket0);
@@ -225,16 +231,36 @@ static int init_platform_device(struct device *dev)
 		if (hsmp_pdev->proto_ver == HSMP_PROTO_VER6) {
 			ret = hsmp_get_tbl_dram_base(i);
 			if (ret)
-				dev_err(dev, "Failed to init metric table\n");
+				dev_info(dev, "Failed to init metric table\n");
 		}
 
 		/* Register with hwmon interface for reporting power */
 		ret = hsmp_create_sensor(dev, i);
 		if (ret)
-			dev_err(dev, "Failed to register HSMP sensors with hwmon\n");
+			dev_info(dev, "Failed to register HSMP sensors with hwmon\n");
 	}
 
 	return 0;
+}
+
+/*
+ * The socket array is devm-managed and freed by the driver core, but the
+ * metric-table DRAM regions are mapped with plain ioremap() during probe and
+ * the per-socket mutexes need an explicit mutex_destroy(), neither of which
+ * devres covers.
+ *
+ * Take the data-plane rwsem for write to drain any in-flight
+ * hsmp_send_message(), unmap the metric tables, destroy the mutexes and drop
+ * the global socket pointer, all before devres frees the array. Registered as
+ * a devres action so it runs on both remove and probe failure.
+ */
+static void hsmp_pltdrv_release(void *data)
+{
+	down_write(&hsmp_sock_rwsem);
+	hsmp_unmap_metric_tbls(hsmp_pdev);
+	hsmp_destroy_metric_read_locks(hsmp_pdev);
+	hsmp_pdev->sock = NULL;
+	up_write(&hsmp_sock_rwsem);
 }
 
 static int hsmp_pltdrv_probe(struct platform_device *pdev)
@@ -247,7 +273,23 @@ static int hsmp_pltdrv_probe(struct platform_device *pdev)
 	if (!hsmp_pdev->sock)
 		return -ENOMEM;
 
+	hsmp_init_metric_read_locks(hsmp_pdev);
+
+	ret = devm_add_action_or_reset(&pdev->dev, hsmp_pltdrv_release, NULL);
+	if (ret)
+		return ret;
+
+	/*
+	 * init_platform_device() runs the mailbox handshake via the probe-only
+	 * senders, which issue messages through hsmp_send_message_locked() and
+	 * so require hsmp_sock_rwsem held. Hold it for write, matching probe's
+	 * role as a socket bring-up path. The lock is not held across
+	 * devm_add_action_or_reset() above so the release action, which also
+	 * takes it for write, does not deadlock if that registration fails.
+	 */
+	down_write(&hsmp_sock_rwsem);
 	ret = init_platform_device(&pdev->dev);
+	up_write(&hsmp_sock_rwsem);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to init HSMP mailbox\n");
 		return ret;
@@ -277,7 +319,7 @@ static int hsmp_pltdrv_remove(struct platform_device *pdev)
 
 static struct platform_driver amd_hsmp_driver = {
 	.probe		= hsmp_pltdrv_probe,
-	.remove 	= hsmp_pltdrv_remove,
+	.remove		= hsmp_pltdrv_remove,
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.dev_groups = hsmp_groups,
@@ -369,8 +411,8 @@ static int __init hsmp_plt_init(void)
 #else
 	hsmp_pdev->num_sockets = amd_num_nodes();
 #endif
-	if (!hsmp_pdev->num_sockets) {
-		pr_err("No CPU sockets detected\n");
+	if (!hsmp_pdev->num_sockets || hsmp_pdev->num_sockets > MAX_AMD_SOCKETS) {
+		pr_err("Wrong number of sockets\n");
 		return ret;
 	}
 

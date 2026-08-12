@@ -15,9 +15,12 @@
 #include <linux/hwmon.h>
 #include <linux/kconfig.h>
 #include <linux/miscdevice.h>
+#include <linux/mutex.h>
 #include <linux/pci.h>
+#include <linux/rwsem.h>
 #include <linux/semaphore.h>
 #include <linux/sysfs.h>
+#include <linux/types.h>
 
 /*
  * Helper macros to handle API changes across kernel versions:
@@ -49,7 +52,7 @@
 #define HSMP_DEVNODE_NAME	"hsmp"
 #define ACPI_HSMP_DEVICE_HID    "AMDI0097"
 
-#define DRIVER_VERSION		"3.0"
+#define DRIVER_VERSION		"3.1"
 
 struct hsmp_mbaddr_info {
 	u32 base_addr;
@@ -63,8 +66,12 @@ struct hsmp_socket {
 	struct bin_attribute hsmp_attr;
 	struct hsmp_mbaddr_info mbinfo;
 	void __iomem *metric_tbl_addr;
+	/* Size of the region mapped at @metric_tbl_addr, as reported by SMU */
+	size_t metric_tbl_size;
 	void __iomem *virt_base_addr;
 	struct semaphore hsmp_sem;
+	/* Serializes HSMP_GET_METRIC_TABLE fill-and-copy for this socket */
+	struct mutex metric_read_lock;
 	char name[HSMP_ATTR_GRP_NAME_SIZE];
 	struct pci_dev *root;
 	struct device *dev;
@@ -77,8 +84,6 @@ struct hsmp_plat_device {
 	struct hsmp_socket *sock;
 	u32 proto_ver;
 	u16 num_sockets;
-	bool is_probed;
-	size_t hsmp_table_size;
 };
 
 int hsmp_cache_proto_ver(u16 sock_ind);
@@ -87,7 +92,10 @@ long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg);
 void hsmp_misc_deregister(void);
 int hsmp_misc_register(struct device *dev);
 int hsmp_get_tbl_dram_base(u16 sock_ind);
-ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size, loff_t off);
+void hsmp_unmap_metric_tbls(struct hsmp_plat_device *pdev);
+void hsmp_init_metric_read_locks(struct hsmp_plat_device *pdev);
+void hsmp_destroy_metric_read_locks(struct hsmp_plat_device *pdev);
+ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size);
 struct hsmp_plat_device *get_hsmp_pdev(void);
 #if IS_ENABLED(CONFIG_HWMON)
 int hsmp_create_sensor(struct device *dev, u16 sock_ind);
@@ -95,4 +103,10 @@ int hsmp_create_sensor(struct device *dev, u16 sock_ind);
 static inline int hsmp_create_sensor(struct device *dev, u16 sock_ind) { return 0; }
 #endif
 int hsmp_msg_get_nargs(u16 sock_ind, u32 msg_id, u32 *data, u8 num_args);
+
+/*
+ * Gates the HSMP data plane: hsmp_send_message() takes it for read; probe and
+ * remove take it for write to bring sockets up and tear them down.
+ */
+extern struct rw_semaphore hsmp_sock_rwsem;
 #endif /* HSMP_H */
