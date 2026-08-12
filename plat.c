@@ -17,6 +17,7 @@
 #endif
 
 #include <linux/acpi.h>
+#include <linux/build_bug.h>
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/pci.h>
@@ -119,7 +120,12 @@ static umode_t hsmp_is_sock_attr_visible(struct kobject *kobj,
  * Static array of 8 + 1(for NULL) elements is created below
  * to create sysfs groups for sockets.
  * is_bin_visible function is used to show / hide the necessary groups.
+ *
+ * Validate the maximum number against MAX_AMD_SOCKETS. If this changes,
+ * then the attributes and groups below must be adjusted.
  */
+static_assert(MAX_AMD_SOCKETS == 8);
+
 #define HSMP_BIN_ATTR(index, _list)					\
 static HSMP_CONST struct bin_attribute attr##index = {			\
 	.attr = { .name = HSMP_METRICS_TABLE_NAME, .mode = 0444},	\
@@ -406,8 +412,8 @@ static int __init hsmp_plt_init(void)
 #else
 	hsmp_pdev->num_sockets = amd_num_nodes();
 #endif
-	if (!hsmp_pdev->num_sockets) {
-		pr_err("No CPU sockets detected\n");
+	if (!hsmp_pdev->num_sockets || hsmp_pdev->num_sockets > MAX_AMD_SOCKETS) {
+		pr_err("Wrong number of sockets\n");
 		return ret;
 	}
 
