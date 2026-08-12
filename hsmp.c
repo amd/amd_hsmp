@@ -20,11 +20,14 @@
 #include <linux/device.h>
 #include <linux/io.h>
 #include <linux/mutex.h>
+#include <linux/mm.h>
 #include <linux/nospec.h>
 #include <linux/rwsem.h>
 #include <linux/semaphore.h>
 #include <linux/acpi.h>
+#include <linux/slab.h>
 #include <linux/sysfs.h>
+#include <linux/uaccess.h>
 
 #include "hsmp.h"
 #include "amd_hsmp.h"  /* this will come from linux kernel as UAPI header */
@@ -377,7 +380,7 @@ static bool is_get_msg(struct hsmp_message *msg)
 	return false;
 }
 
-long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
+static long hsmp_ioctl_msg(struct file *fp, unsigned long arg)
 {
 	int __user *arguser = (int  __user *)arg;
 	struct hsmp_message msg = { 0 };
@@ -446,10 +449,155 @@ long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	return 0;
 }
 
-ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size)
+static ssize_t hsmp_metric_tbl_read_locked(struct hsmp_socket *sock, char *buf,
+					   size_t size);
+
+/*
+ * Fetch the firmware metric (telemetry) table for the requested socket and
+ * copy it to the userspace buffer described by the request.
+ *
+ * The metric table size is variable across HSMP protocol versions and on
+ * Family 1Ah Model 50h-5Fh exceeds PAGE_SIZE.  The request carries the buffer
+ * size, which may be anything up to the size firmware reported for this
+ * socket's table.
+ */
+static long hsmp_ioctl_get_telemetry(struct file *fp, unsigned long arg)
+{
+	void __user *arguser = (void __user *)arg;
+	struct hsmp_telemetry_data req;
+	struct hsmp_socket *sock;
+	void __user *user_buf;
+	unsigned int sock_ind;
+	size_t tbl_size;
+	void *kbuf = NULL;
+	int ret;
+
+	/* Telemetry data is read-only; require read access on the fd. */
+	if (!(fp->f_mode & FMODE_READ))
+		return -EPERM;
+
+	if (copy_from_user(&req, arguser, sizeof(req)))
+		return -EFAULT;
+
+	/*
+	 * Reserved fields must be zero so future kernels can safely
+	 * repurpose them without breaking already-deployed userspace.
+	 */
+	if (req.reserved)
+		return -EINVAL;
+
+	user_buf = u64_to_user_ptr(req.buf);
+
+	/*
+	 * /dev/hsmp is a singleton character device that outlives an individual
+	 * socket unbind, so an ioctl on an already-open fd can run concurrently
+	 * with socket teardown.  Hold hsmp_sock_rwsem for read across the socket
+	 * lookup, the checks on its metric-table state and the read itself:
+	 * probe and remove take the same lock for write, so they cannot free the
+	 * socket array, unmap the table or destroy the per-socket mutex while
+	 * this runs.
+	 *
+	 * The lock is dropped before the copy_to_user() below.  Faulting in the
+	 * destination can block indefinitely on a userfaultfd-backed buffer,
+	 * which would leave a socket unbind waiting for the write lock.
+	 */
+	down_read(&hsmp_sock_rwsem);
+
+	if (!hsmp_pdev.sock || req.sock_ind >= hsmp_pdev.num_sockets) {
+		ret = -ENODEV;
+		goto unlock;
+	}
+
+	/*
+	 * Sanitize the user-controlled socket index against speculative
+	 * execution.  The bounds check above retires the out-of-range
+	 * case with -ENODEV, but a mispredicted branch can still let the
+	 * CPU speculatively use sock_ind as an index into
+	 * hsmp_pdev.sock[] and pull arbitrary kernel memory into the
+	 * cache (Spectre v1, CVE-2017-5753).  array_index_nospec() turns
+	 * the bounds check into a data-flow clamp so the speculative
+	 * load is in-range too.
+	 */
+	sock_ind = array_index_nospec(req.sock_ind, hsmp_pdev.num_sockets);
+	sock = &hsmp_pdev.sock[sock_ind];
+	if (!sock->metric_tbl_addr) {
+		ret = -ENODEV;
+		goto unlock;
+	}
+
+	tbl_size = sock->metric_tbl_size;
+	if (!tbl_size) {
+		ret = -ENODEV;
+		goto unlock;
+	}
+
+	/*
+	 * A request shorter than the firmware table is served with the
+	 * leading @size bytes of the snapshot, so userspace built
+	 * against an older table layout keeps working on firmware that
+	 * grew the table.  Asking for more than firmware provides is
+	 * rejected rather than short-written, so a caller can never
+	 * mistake a partial copy for a full one.
+	 */
+	if (!req.size || req.size > tbl_size) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	/*
+	 * The bounce buffer is overwritten in full by memcpy_fromio()
+	 * inside hsmp_metric_tbl_read_locked(); use kvmalloc() to avoid
+	 * the zeroing cost of kvzalloc() on the ~13 KB allocation done
+	 * on every ioctl call.
+	 */
+	kbuf = kvmalloc(tbl_size, GFP_KERNEL);
+	if (!kbuf) {
+		ret = -ENOMEM;
+		goto unlock;
+	}
+
+	ret = hsmp_metric_tbl_read_locked(sock, kbuf, tbl_size);
+
+unlock:
+	up_read(&hsmp_sock_rwsem);
+
+	if (ret < 0)
+		goto free_kbuf;
+
+	ret = 0;
+	if (copy_to_user(user_buf, kbuf, req.size))
+		ret = -EFAULT;
+
+free_kbuf:
+	kvfree(kbuf);
+
+	return ret;
+}
+
+long hsmp_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
+{
+	switch (cmd) {
+	case HSMP_IOCTL_CMD:
+		return hsmp_ioctl_msg(fp, arg);
+	case HSMP_IOCTL_GET_TELEMETRY_DATA:
+		return hsmp_ioctl_get_telemetry(fp, arg);
+	default:
+		return -ENOTTY;
+	}
+}
+
+/*
+ * Caller must hold hsmp_sock_rwsem. It keeps @sock, its metric-table mapping
+ * and its metric_read_lock alive: probe and remove take the same lock for
+ * write while they bring sockets up and tear them down.
+ */
+static ssize_t hsmp_metric_tbl_read_locked(struct hsmp_socket *sock, char *buf,
+					   size_t size)
 {
 	struct hsmp_message msg = { 0 };
 	int ret;
+
+	lockdep_assert_held(&hsmp_sock_rwsem);
 
 	if (!sock || !buf)
 		return -EINVAL;
@@ -475,7 +623,7 @@ ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size)
 	 */
 	mutex_lock(&sock->metric_read_lock);
 
-	ret = hsmp_send_message(&msg);
+	ret = hsmp_send_message_locked(&msg);
 	if (ret) {
 		mutex_unlock(&sock->metric_read_lock);
 		return ret;
@@ -485,6 +633,19 @@ ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size)
 	mutex_unlock(&sock->metric_read_lock);
 
 	return size;
+}
+
+ssize_t hsmp_metric_tbl_read(struct hsmp_socket *sock, char *buf, size_t size)
+{
+	ssize_t ret;
+
+	down_read(&hsmp_sock_rwsem);
+
+	ret = hsmp_metric_tbl_read_locked(sock, buf, size);
+
+	up_read(&hsmp_sock_rwsem);
+
+	return ret;
 }
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 EXPORT_SYMBOL_NS_GPL(hsmp_metric_tbl_read, "AMD_HSMP");
