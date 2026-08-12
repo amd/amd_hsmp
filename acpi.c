@@ -123,7 +123,7 @@ static acpi_status hsmp_resource(struct acpi_resource *res, void *data)
 	return AE_OK;
 }
 
-static int hsmp_read_acpi_dsd(struct hsmp_socket *sock)
+static int hsmp_read_acpi_dsd(struct device *dev, struct hsmp_socket *sock)
 {
 	struct acpi_buffer buf = { ACPI_ALLOCATE_BUFFER, NULL };
 	union acpi_object *guid, *mailbox_package;
@@ -132,10 +132,10 @@ static int hsmp_read_acpi_dsd(struct hsmp_socket *sock)
 	int ret = 0;
 	int j;
 
-	status = acpi_evaluate_object_typed(ACPI_HANDLE(sock->dev), "_DSD", NULL,
+	status = acpi_evaluate_object_typed(ACPI_HANDLE(dev), "_DSD", NULL,
 					    &buf, ACPI_TYPE_PACKAGE);
 	if (ACPI_FAILURE(status)) {
-		dev_err(sock->dev, "Failed to read mailbox reg offsets from DSD table, err: %s\n",
+		dev_err(dev, "Failed to read mailbox reg offsets from DSD table, err: %s\n",
 			acpi_format_exception(status));
 		return -ENODEV;
 	}
@@ -158,7 +158,7 @@ static int hsmp_read_acpi_dsd(struct hsmp_socket *sock)
 	guid = &dsd->package.elements[0];
 	mailbox_package = &dsd->package.elements[1];
 	if (!is_acpi_hsmp_uuid(guid) || mailbox_package->type != ACPI_TYPE_PACKAGE) {
-		dev_err(sock->dev, "Invalid hsmp _DSD table data\n");
+		dev_err(dev, "Invalid hsmp _DSD table data\n");
 		ret = -EINVAL;
 		goto free_buf;
 	}
@@ -208,14 +208,14 @@ free_buf:
 	return ret;
 }
 
-static int hsmp_read_acpi_crs(struct hsmp_socket *sock)
+static int hsmp_read_acpi_crs(struct device *dev, struct hsmp_socket *sock)
 {
 	acpi_status status;
 
-	status = acpi_walk_resources(ACPI_HANDLE(sock->dev), METHOD_NAME__CRS,
+	status = acpi_walk_resources(ACPI_HANDLE(dev), METHOD_NAME__CRS,
 				     hsmp_resource, sock);
 	if (ACPI_FAILURE(status)) {
-		dev_err(sock->dev, "Failed to look up MP1 base address from CRS method, err: %s\n",
+		dev_err(dev, "Failed to look up MP1 base address from CRS method, err: %s\n",
 			acpi_format_exception(status));
 		return -EINVAL;
 	}
@@ -223,14 +223,14 @@ static int hsmp_read_acpi_crs(struct hsmp_socket *sock)
 		return -EINVAL;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0)
 	/* The mapped region should be un-cached */
-	sock->virt_base_addr = devm_ioremap_uc(sock->dev, sock->mbinfo.base_addr,
+	sock->virt_base_addr = devm_ioremap_uc(dev, sock->mbinfo.base_addr,
 					       sock->mbinfo.size);
 #else
-	sock->virt_base_addr = devm_ioremap_nocache(sock->dev, sock->mbinfo.base_addr,
+	sock->virt_base_addr = devm_ioremap_nocache(dev, sock->mbinfo.base_addr,
 					       sock->mbinfo.size);
 #endif
 	if (!sock->virt_base_addr) {
-		dev_err(sock->dev, "Failed to ioremap MP1 base address\n");
+		dev_err(dev, "Failed to ioremap MP1 base address\n");
 		return -ENOMEM;
 	}
 
@@ -252,12 +252,12 @@ static int hsmp_parse_acpi_table(struct device *dev, u16 sock_ind)
 	dev_set_drvdata(dev, sock);
 
 	/* Read MP1 base address from CRS method */
-	ret = hsmp_read_acpi_crs(sock);
+	ret = hsmp_read_acpi_crs(dev, sock);
 	if (ret)
 		return ret;
 
 	/* Read mailbox offsets from DSD table */
-	return hsmp_read_acpi_dsd(sock);
+	return hsmp_read_acpi_dsd(dev, sock);
 }
 
 static ssize_t hsmp_metric_tbl_acpi_read(struct file *filp, struct kobject *kobj,
