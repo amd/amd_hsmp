@@ -84,7 +84,7 @@ static ssize_t hsmp_metric_tbl_plat_read(struct file *filp, struct kobject *kobj
 
 	sock = &hsmp_pdev->sock[sock_ind];
 
-	return hsmp_metric_tbl_read(sock, buf, count, off);
+	return hsmp_metric_tbl_read(sock, buf, count);
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)

@@ -262,7 +262,7 @@ static ssize_t hsmp_metric_tbl_acpi_read(struct file *filp, struct kobject *kobj
 	struct device *dev = container_of(kobj, struct device, kobj);
 	struct hsmp_socket *sock = dev_get_drvdata(dev);
 
-	return hsmp_metric_tbl_read(sock, buf, count, off);
+	return hsmp_metric_tbl_read(sock, buf, count);
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
@@ -585,6 +585,7 @@ static int init_acpi(struct device *dev)
 static HSMP_CONST struct bin_attribute hsmp_metric_tbl_attr = {
 	.attr = { .name = HSMP_METRICS_TABLE_NAME, .mode = 0444},
 	HSMP_BIN_READ = hsmp_metric_tbl_acpi_read,
+	.size = sizeof(struct hsmp_metric_table),
 };
 
 static HSMP_CONST struct bin_attribute *hsmp_attr_list[] = {
