@@ -19,6 +19,7 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/nospec.h>
+#include <linux/rwsem.h>
 #include <linux/semaphore.h>
 #include <linux/acpi.h>
 #include <linux/sysfs.h>
@@ -48,6 +49,18 @@
 #define CHECK_GET_BIT		BIT(31)
 
 static struct hsmp_plat_device hsmp_pdev;
+
+/*
+ * Serializes AMD HSMP socket bring-up and teardown: ACPI probe and remove take
+ * it for write so concurrent per-socket probes cannot race the is_probed
+ * handshake or the one-time socket-array allocation.
+ */
+DECLARE_RWSEM(hsmp_sock_rwsem);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+EXPORT_SYMBOL_NS_GPL(hsmp_sock_rwsem, "AMD_HSMP");
+#else
+EXPORT_SYMBOL_NS_GPL(hsmp_sock_rwsem, AMD_HSMP);
+#endif
 
 /*
  * Send a message to the HSMP port via PCI-e config space registers
