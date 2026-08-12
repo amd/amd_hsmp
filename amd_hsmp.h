@@ -53,21 +53,21 @@ enum hsmp_message_ids {
 	HSMP_SET_XGMI_PSTATE_RANGE,	/* 26h Set xGMI P-state range */
 	HSMP_CPU_RAIL_ISO_FREQ_POLICY,	/* 27h Get/Set Cpu Iso frequency policy */
 	HSMP_DFC_ENABLE_CTRL,		/* 28h Enable/Disable DF C-state */
-	HSMP_PC6_ENABLE,		/* 29h Get/Set PC6 Enable/Disable Status */
-	HSMP_CC6_ENABLE,		/* 2Ah Get/Set CC6 Enable/Disable Status */
+	HSMP_PC6_ENABLE,		/* 29h Get/Set PC6 enable/disable status */
+	HSMP_CC6_ENABLE,		/* 2Ah Get/Set CC6 enable/disable status */
 	HSMP_GET_RAPL_UNITS = 0x30,	/* 30h Get scaling factor for energy */
 	HSMP_GET_RAPL_CORE_COUNTER,	/* 31h Get core energy counter value */
 	HSMP_GET_RAPL_PACKAGE_COUNTER,	/* 32h Get package energy counter value */
-	HSMP_DIMM_SB_RD,                /* 33h Get data from a specified device on the DIMM.*/
-	HSMP_READ_CCD_POWER,		/* 34h Get the average power consumed by CCD */
-	HSMP_READ_TDELTA,		/* 35h Get thermal solution behaviour */
-	HSMP_GET_SVI3_VR_CTRL_TEMP,	/* 36h Get temperature of SVI3 VR controlller rails */
-	HSMP_GET_ENABLED_HSMP_CMDS,	/* 37h Get/Set supported HSMP commands */
-	HSMP_SET_GET_FLOOR_LIMIT,       /* 38h Get/Set supported Floor Limit commands */
-	HSMP_DIMM_SB_WR,                /* 39h Set data to a specified device on the DIMM.*/
-	HSMP_SDPS_LIMIT,                /* 3Ah Get/Set SDPSLimit. */
+	HSMP_DIMM_SB_RD,		/* 33h Get DIMM sideband data */
+	HSMP_READ_CCD_POWER,		/* 34h Get average CCD power */
+	HSMP_READ_TDELTA,		/* 35h Get thermal behaviour */
+	HSMP_GET_SVI3_VR_CTRL_TEMP,	/* 36h Get SVI3 VR controller rail temp */
+	HSMP_GET_ENABLED_HSMP_CMDS,	/* 37h Get supported HSMP commands */
+	HSMP_SET_GET_FLOOR_LIMIT,	/* 38h Get/Set core floor frequency limit */
+	HSMP_DIMM_SB_WR,		/* 39h Set DIMM sideband data */
+	HSMP_SDPS_LIMIT,		/* 3Ah Get/Set SDPS limit */
 	HSMP_PQOS_TRAFFIC_PRIORITY,	/* 3Bh Get/Set traffic priority */
-	HSMP_PQOS_FLOATING_BW,		/* 3Ch Get/Set floating bandwidth */
+	HSMP_PQOS_FLOATING_BW,		/* 3Ch Get/Set max floating bandwidth */
 	HSMP_MSG_ID_MAX,
 };
 
@@ -80,10 +80,10 @@ struct hsmp_message {
 };
 
 enum hsmp_msg_type {
-	HSMP_RSVD	= -1,
-	HSMP_SET	= 0,
-	HSMP_GET	= 1,
-	HSMP_SET_GET 	= 2,
+	HSMP_RSVD = -1,
+	HSMP_SET  = 0,
+	HSMP_GET  = 1,
+	HSMP_SET_GET	= 2,
 };
 
 enum hsmp_proto_versions {
@@ -108,7 +108,8 @@ struct hsmp_msg_desc {
  *
  * Not supported messages would return -ENOMSG.
  */
-static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
+static const struct hsmp_msg_desc hsmp_msg_desc_table[]
+				__attribute__((unused)) = {
 	/* RESERVED */
 	{0, 0, HSMP_RSVD},
 
@@ -182,15 +183,24 @@ static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
 
 	/*
 	 * HSMP_SET_XGMI_LINK_WIDTH, num_args = 1, response_sz = 0/1
-	 * input: args[0] = set/get XGMI Link width[31] + min link width[15:8] + max link width[7:0]
-	 * output: args[0] = current min link width[15:8] + current max link width[7:0]
+	 * input: args[0] = set/get XGMI Link width[31] (0 = set, 1 = get) +
+	 *                  min link width[15:8] + max link width[7:0]
+	 *        Link width encoding: 0 = x4, 1 = x8, 2 = x16.
+	 *        On SET, max must be >= min.  On GET, [15:0] are reserved.
+	 * output: args[0] = reserved[31:16] + min link width[15:8] +
+	 *                   max link width[7:0]
 	 */
 	{1, 1, HSMP_SET_GET},
 
 	/*
-	 * HSMP_SET_DF_PSTATE, num_args = 1, response_sz = 0/1
-	 * input: args[0] = set/get df pstate[31] + df pstate[7:0]
-	* output: args[0] = APB Enabled/Disabled[8]+current df pstate[7:0]
+	 * HSMP_SET_DF_PSTATE (APBDisable), num_args = 1, response_sz = 0/1
+	 * input: args[0] = set APB_DISABLE / get APB state[31]
+	 *                  (0 = set & lock DF P-state, 1 = get) +
+	 *                  reserved[30:8] +
+	 *                  DF P-state[7:0] (0..2; reserved on GET)
+	 * output: args[0] = reserved[31:9] +
+	 *                   APB state[8] (1 = disabled, 0 = enabled) +
+	 *                   locked DF P-state[7:0] if [8] = 1, else reserved
 	 */
 	{1, 1, HSMP_SET_GET},
 
@@ -260,7 +270,7 @@ static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
 	/*
 	 * HSMP_GET_DIMM_THERMAL, num_args = 1, response_sz = 1
 	 * input: args[0] = DIMM address[7:0]
-	 * output: args[0] = temperature in degree celcius[31:21] + update rate in ms[16:8] +
+	 * output: args[0] = temperature in degree celsius[31:21] + update rate in ms[16:8] +
 	 * DIMM address[7:0]
 	 */
 	{1, 1, HSMP_GET},
@@ -273,7 +283,7 @@ static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
 
 	/*
 	 * HSMP_GET_CCLK_CORE_LIMIT, num_args = 1, response_sz = 1
-	 * input: args[0] = apic id of the core[31:0]
+	 * input: args[0] = apic id [31:0]
 	 * output: args[0] = frequency in MHz[31:0]
 	 */
 	{1, 1, HSMP_GET},
@@ -318,16 +328,30 @@ static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
 	{1, 1, HSMP_SET},
 
 	/*
-	 * HSMP_SET_POWER_MODE, num_args = 1, response_sz = 0/1
-	 * input: args[0] = set/get power mode[31] + power efficiency mode[2:0]
-	 * output: args[0] = current power efficiency mode[2:0]
+	 * HSMP_SET_POWER_MODE (PwrEfficiencyModeSelection),
+	 *	num_args = 1, response_sz = 1
+	 * input: args[0] = set/get policy[31] (0 = set, 1 = get) +
+	 *                  high util point[30:24] +
+	 *                  low util point[23:17] +
+	 *                  PPT limit[16:5] +
+	 *                  reserved[4:3] + mode selection[2:0]
+	 *        [30:5] are valid only when [2:0] is a balanced core mode
+	 *        (4 or 5). [2:0] is reserved when getting (bit[31] = 1).
+	 * output: args[0] same layout, [31] reserved, [2:0] = arbitrated
+	 *         current efficiency mode.
 	 */
 	{1, 1, HSMP_SET_GET},
 
 	/*
-	 * HSMP_SET_PSTATE_MAX_MIN, num_args = 1, response_sz = 0/1
-	 * input: args[0] = set/get power mode[31] + min df pstate[15:8] + max df pstate[7:0]
-	* output: args[0] = min df pstate[15:8] + max df pstate[7:0]
+	 * HSMP_SET_PSTATE_MAX_MIN (DfPstateRange), num_args = 1, response_sz = 0/1
+	 * input: args[0] = set/get DF P-state range[31] (0 = set, 1 = get) +
+	 *                  reserved[30:16] +
+	 *                  min DF P-state[15:8] + max DF P-state[7:0]
+	 *        DF P-state encoding: 0 = DFP0 (high performance),
+	 *                             1 = DFP1, 2 = DFP2 (low performance).
+	 *        [15:0] are reserved when getting (args[0] bit[31] = 1).
+	 * output: args[0] = reserved[31:16] + min DF P-state[15:8] +
+	 *                   max DF P-state[7:0]
 	 */
 	{1, 1, HSMP_SET_GET},
 
@@ -351,8 +375,9 @@ static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
 
 	/*
 	 * HSMP_SET_XGMI_PSTATE_RANGE, num_args = 1, response_sz = 0/1
-	 * input: args[0] = set/get XGMI pstate range[31] + min xGMI p-state[15:8] + max xGMI state[7:0]
-	* output: args[0] = min xGMI p-state[15:8] + max xGMI state[7:0]
+	 * input: args[0] = set/get xGMI p-state range[31] +
+	 *                  min xGMI p-state[15:8] + max xGMI p-state[7:0]
+	 * output: args[0] = min xGMI p-state[15:8] + max xGMI p-state[7:0]
 	 */
 	{1, 1, HSMP_SET_GET},
 
@@ -372,16 +397,26 @@ static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
 	{1, 1, HSMP_SET_GET},
 
 	/*
-	 * HSMP_PC6_REQUEST, num_args = 1, response_sz = 0/1
-	 * input: args[0] = set/get PC6 control[31] + disable/enable PC6[0]
-	 * output: args[0] = current PC6 control status[0]
+	 * HSMP_PC6_ENABLE (Pc6Enable), num_args = 1, response_sz = 0/1
+	 * input: args[0] = set/get PC6 control[31] (0 = set, 1 = get) +
+	 *                  reserved[30:1] +
+	 *                  enable PC6[0] (0 = disable, 1 = enable;
+	 *                  reserved on GET)
+	 * output: args[0] = reserved[31:1] + current PC6 control[0]
+	 *                   (last value configured via HSMP or APML)
 	 */
 	{1, 1, HSMP_SET_GET},
 
 	/*
-	 * HSMP_CC6_REQUEST, num_args = 1, response_sz = 0/1
-	 * input: args[0] = set/get CC6 control[31] + disable/enable CC6[0]
-	 * output: args[0] = current CC6 control status[0]
+	 * HSMP_CC6_ENABLE (CC6Enable), num_args = 1, response_sz = 0/1
+	 * Configures CC6 enable for all cores; changing the setting does
+	 * not by itself transition cores in or out of CC6.
+	 * input: args[0] = set/get CC6 control[31] (0 = set, 1 = get) +
+	 *                  reserved[30:1] +
+	 *                  enable CC6[0] (0 = disable, 1 = enable;
+	 *                  reserved on GET)
+	 * output: args[0] = reserved[31:1] + current CC6 control[0]
+	 *                   (last value configured via HSMP or APML)
 	 */
 	{1, 1, HSMP_SET_GET},
 
@@ -400,7 +435,7 @@ static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
 
 	/*
 	 * HSMP_GET_RAPL_CORE_COUNTER, num_args = 1, response_sz = 1
-	 * input: args[0] = Apic id[15:0]
+	 * input: args[0] = apic id[15:0]
 	 * output: args[0] = lower 32 bits of energy
 	 * output: args[1] = upper 32 bits of energy
 	 */
@@ -415,115 +450,85 @@ static const struct hsmp_msg_desc hsmp_msg_desc_table[] = {
 
 	/*
 	 * HSMP_DIMM_SB_RD, num_args = 1, response_sz = 1
-	 * input: args[0] =
-	 * 		     [07:00] DIMM address
-	 * 		     [11:08] LID of device
-	 * 		     [22:12] Register offset in given reg space
-	 * 		     [23]    Register space
-	 * output: args[0] = [03:00] Read data byte
+	 * input: args[0] = reg space[23] + reg offset[22:12] +
+	 *                  device LID[11:8] + DIMM address[7:0]
+	 * output: args[0] = read data byte[3:0]
 	 */
 	{1, 1, HSMP_GET},
 
 	/*
 	 * HSMP_READ_CCD_POWER, num_args = 1, response_sz = 1
-	 * input: args[0] = [15:00] ApicId of core
-	 * output: args[0] = [31:00] CCD power(mWatts)
+	 * input: args[0]  = apic id of core[15:0]
+	 * output: args[0] = CCD power(mWatts)[31:0]
 	 */
 	{1, 1, HSMP_GET},
 
 	/*
 	 * HSMP_READ_TDELTA, num_args = 0, response_sz = 1
-	 * input: None
-	 * output: args[0] = [31:00] Thermal Behaviour
+	 * output: args[0] = thermal behaviour[31:0]
 	 */
 	{0, 1, HSMP_GET},
 
 	/*
 	 * HSMP_GET_SVI3_VR_CTRL_TEMP, num_args = 1, response_sz = 1
-	 * input: args[0] =
-	 * 		     [00] Read SVI3 temperature data
-	 * 		     [03:01] SVI3 rail index
-	 * output: args[0] =
-	 * 		     [30:28] SVI3 rail index
-	 * 		     [27:00] SVI3 rail temperature(degree C)
+	 * input: args[0] = SVI3 rail index[3:1] + read temperature[0]
+	 * output: args[0] = SVI3 rail index[30:28] +
+	 *                   rail temperature in degree C[27:0]
 	 */
 	{1, 1, HSMP_GET},
 
 	/*
 	 * HSMP_GET_ENABLED_HSMP_CMDS, num_args = 1, response_sz = 3
-	 * input: args[0] = [00] HSMP command mask
-	 * output: args[0], args[1], args[2] = status of HSMP command
+	 * input: args[0] = HSMP command mask[0]
+	 * output: status of HSMP command = args[0], args[1], args[2]
 	 */
 	{1, 3, HSMP_GET},
 
 	/*
 	 * HSMP_SET_GET_FLOOR_LIMIT, num_args = 1, response_sz = 1
-	 * input: args[0] =
-	 *                  [31:30]=Set or Get:
-	 *                     00=Set the Floor frequency per core.
-	 *                     01=Set the Floor frequency for all cores.
-	 *                     10=Get the Floor frequency of a core.
-	 *                     11=Get the Effective Floor frequency per core.
-	 *                  [29:28]=Reserved.
-	 *                  [27:16]=ApicId.
-	 *                 Note: DataIn[27:16] are Reserved if DataIn[31:30]==01.
-	 *
-	 *                 If DataIn[31]=0
-	 *                  [15:0]=Floor frequency limit.
-	 *                 Else
-	 *                  [15:0]=Reserved.
-	 *
-	 * output: args[0] =
-	 *                 If DataIn[31:30]=11
-	 *                  [15:0]=Effective Floor frequency limit(MHz).
-	 *                 Else
-	 *                  [15:0]=Floor frequency limit (MHz).
-	 *                 The output will be None if DataIn[31]=0.
+	 * input: args[0] = op[31:30] + reserved[29:28] +
+	 *                  apic id[27:16] + floor frequency MHz[15:0]
+	 *        op encoding: 00 = set per-core floor,
+	 *                     01 = set all-cores floor (apic id reserved),
+	 *                     10 = get per-core floor,
+	 *                     11 = get per-core effective floor.
+	 *        Floor frequency field is reserved on GET (bit[31] = 1).
+	 * output: args[0] = floor frequency MHz[15:0]
+	 *                   (effective for op 11, configured for op 10;
+	 *                   reserved on SET)
 	 */
 	{1, 1, HSMP_SET_GET},
 
 	/*
 	 * HSMP_DIMM_SB_WR, num_args = 1, response_sz = 0
-	 * input: args[0] =
-	 *                   [07:00] DIMM address
-	 *                   [11:08] LID of device
-	 *                   [22:12] Register offset in given reg space
-	 *                   [23]    Register space
-	 *                   [31:24] Write Data
-	 * output: None
+	 * input: args[0] = write data[31:24] + reg space[23] +
+	 *                  reg offset[22:12] + device LID[11:8] +
+	 *                  DIMM address[7:0]
 	 */
-	 {1, 0, HSMP_SET},
+	{1, 0, HSMP_SET},
 
 	/*
 	 * HSMP_SDPS_LIMIT, num_args = 1, response_sz = 1
-	 * input: args[0] =
-	 *                   [30:00] SDPS Limit
-	 *                   [31] Set/Get
-	 * output: args[0] =
-	 *                   [30:00] SDPS Limit
+	 * input: args[0] = set/get SDPS limit[31] (0 = set, 1 = get) +
+	 *                  SDPS limit[30:0]
+	 * output: args[0] = SDPS limit[30:0]
 	 */
-	 {1, 1, HSMP_SET_GET},
+	{1, 1, HSMP_SET_GET},
 
-	 /*
+	/*
 	 * HSMP_PQOS_TRAFFIC_PRIORITY, num_args = 1, response_sz = 1
-	 * input: args[0] =
-	 *                  [31:30] Operation
-	 *                  [27:26] Priority selector
-	 *                  [21:20] Priority value
-	 *                  [19:0]  Input
-	 * output: args[0] = Supported priorities or Priority val[1:0]
+	 * input: args[0] = op[31:30] + priority sel[27:26] +
+	 *                  priority val[21:20] + input[19:0]
+	 * output: args[0] = supported priorities or priority val[1:0]
 	 */
 	{1, 1, HSMP_SET_GET},
 
 	/*
 	 * HSMP_PQOS_FLOATING_BW, num_args = 1, response_sz = 2
-	 * input: args[0] =
-	 *                  [31]    Operation
-	 *                  [30:29] Sub-operation
-	 *                  [28:0]  Parameter
-	 * output: args[0] = Discovery bits or Floating/Global memory BW (Gbps)
-	 * output: args[1] = Reserved or
-	 *                   config (drop adjustment, sampling delay, hysteresis)
+	 * input: args[0] = op[31] + sub-op[30:29] + params[28:0]
+	 * output: args[0] = discovery bits or floating/global memory BW (Gbps)
+	 * output: args[1] = reserved or config (drop adj, sampling delay,
+	 *                   hysteresis)
 	 */
 	{1, 2, HSMP_SET_GET},
 };
