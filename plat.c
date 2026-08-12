@@ -147,12 +147,11 @@ HSMP_BIN_ATTR(5, *sock5_attr_list);
 HSMP_BIN_ATTR(6, *sock6_attr_list);
 HSMP_BIN_ATTR(7, *sock7_attr_list);
 
-
 #define HSMP_BIN_ATTR_GRP(index, _list, _name)				\
 static HSMP_CONST struct attribute_group sock##index##_attr_grp = {	\
 	HSMP_BIN_ATTRS_FIELD = _list,					\
 	.is_bin_visible = hsmp_is_sock_attr_visible,			\
-	.name = #_name,						\
+	.name = #_name,							\
 }
 
 HSMP_BIN_ATTR_GRP(0, sock0_attr_list, socket0);
@@ -320,7 +319,7 @@ static int hsmp_pltdrv_remove(struct platform_device *pdev)
 
 static struct platform_driver amd_hsmp_driver = {
 	.probe		= hsmp_pltdrv_probe,
-	.remove 	= hsmp_pltdrv_remove,
+	.remove		= hsmp_pltdrv_remove,
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.dev_groups = hsmp_groups,

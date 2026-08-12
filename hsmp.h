@@ -15,8 +15,8 @@
 #include <linux/hwmon.h>
 #include <linux/kconfig.h>
 #include <linux/miscdevice.h>
-#include <linux/pci.h>
 #include <linux/mutex.h>
+#include <linux/pci.h>
 #include <linux/rwsem.h>
 #include <linux/semaphore.h>
 #include <linux/sysfs.h>

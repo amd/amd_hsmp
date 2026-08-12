@@ -19,12 +19,11 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/io.h>
-#include <linux/mutex.h>
 #include <linux/mm.h>
+#include <linux/mutex.h>
 #include <linux/nospec.h>
 #include <linux/rwsem.h>
 #include <linux/semaphore.h>
-#include <linux/acpi.h>
 #include <linux/slab.h>
 #include <linux/sysfs.h>
 #include <linux/uaccess.h>

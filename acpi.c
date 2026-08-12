@@ -448,10 +448,10 @@ static ssize_t hsmp_msg_fw_ver_show(struct device *dev, struct device_attribute 
 			  FIELD_GET(FW_VER_MINOR_MASK, data),
 			  FIELD_GET(FW_VER_DEBUG_MASK, data));
 #else
-       return sprintf(buf, "%lu.%lu.%lu\n",
-			FIELD_GET(FW_VER_MAJOR_MASK, data),
-			FIELD_GET(FW_VER_MINOR_MASK, data),
-			FIELD_GET(FW_VER_DEBUG_MASK, data));
+	return sprintf(buf, "%lu.%lu.%lu\n",
+		       FIELD_GET(FW_VER_MAJOR_MASK, data),
+		       FIELD_GET(FW_VER_MINOR_MASK, data),
+		       FIELD_GET(FW_VER_DEBUG_MASK, data));
 #endif
 }
 
