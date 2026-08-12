@@ -244,7 +244,6 @@ static int hsmp_parse_acpi_table(struct device *dev, u16 sock_ind)
 	int ret;
 
 	sock->sock_ind		= sock_ind;
-	sock->dev		= dev;
 	sock->amd_hsmp_rdwr	= amd_hsmp_acpi_rdwr;
 
 	sema_init(&sock->hsmp_sem, 1);
@@ -257,7 +256,22 @@ static int hsmp_parse_acpi_table(struct device *dev, u16 sock_ind)
 		return ret;
 
 	/* Read mailbox offsets from DSD table */
-	return hsmp_read_acpi_dsd(dev, sock);
+	ret = hsmp_read_acpi_dsd(dev, sock);
+	if (ret)
+		return ret;
+
+	/*
+	 * Publish sock->dev last.  hsmp_send_message() uses it (via
+	 * smp_load_acquire()) as the readiness gate for the lock-free data
+	 * plane, so it must become visible only after virt_base_addr, the
+	 * mailbox offsets and the semaphore are fully initialized.  On a
+	 * multi-socket system socket 0 exposes /dev/hsmp before later sockets
+	 * finish probing, so without this an ioctl aimed at a socket still in
+	 * bring-up could pass the gate and dereference a NULL virt_base_addr.
+	 */
+	smp_store_release(&sock->dev, dev);
+
+	return 0;
 }
 
 static ssize_t hsmp_metric_tbl_acpi_read(struct file *filp, struct kobject *kobj,

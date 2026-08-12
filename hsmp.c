@@ -232,6 +232,19 @@ int hsmp_send_message(struct hsmp_message *msg)
 	sock_ind = array_index_nospec(msg->sock_ind, hsmp_pdev.num_sockets);
 	sock = &hsmp_pdev.sock[sock_ind];
 
+	/*
+	 * A slot exists for every possible socket, but it is only usable once
+	 * that socket has actually been probed.  Reject messages aimed at a
+	 * socket that was never brought up or is still in bring-up, so we never
+	 * operate on a zero-initialized semaphore or an unmapped mailbox.  A
+	 * non-NULL dev also guarantees virt_base_addr, the mailbox offsets and
+	 * the semaphore are visible.
+	 *
+	 * Pairs with smp_store_release(&sock->dev) in hsmp_parse_acpi_table().
+	 */
+	if (!smp_load_acquire(&sock->dev))
+		return -ENODEV;
+
 	ret = down_interruptible(&sock->hsmp_sem);
 	if (ret < 0)
 		return ret;
