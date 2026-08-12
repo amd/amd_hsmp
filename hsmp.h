@@ -20,6 +20,7 @@
 #include <linux/rwsem.h>
 #include <linux/semaphore.h>
 #include <linux/sysfs.h>
+#include <linux/types.h>
 
 /*
  * Helper macros to handle API changes across kernel versions:
@@ -51,7 +52,7 @@
 #define HSMP_DEVNODE_NAME	"hsmp"
 #define ACPI_HSMP_DEVICE_HID    "AMDI0097"
 
-#define DRIVER_VERSION		"3.0"
+#define DRIVER_VERSION		"3.1"
 
 struct hsmp_mbaddr_info {
 	u32 base_addr;
@@ -65,6 +66,8 @@ struct hsmp_socket {
 	struct bin_attribute hsmp_attr;
 	struct hsmp_mbaddr_info mbinfo;
 	void __iomem *metric_tbl_addr;
+	/* Size of the region mapped at @metric_tbl_addr, as reported by SMU */
+	size_t metric_tbl_size;
 	void __iomem *virt_base_addr;
 	struct semaphore hsmp_sem;
 	/* Serializes HSMP_GET_METRIC_TABLE fill-and-copy for this socket */
