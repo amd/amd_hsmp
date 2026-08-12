@@ -584,7 +584,8 @@ static ssize_t hsmp_freq_limit_source_show(struct device *dev, struct device_att
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 			len += sysfs_emit_at(buf, len, "%s\n", freqlimit_srcnames[index]);
 #else
-			len += scnprintf(buf, len, "%s\n", freqlimit_srcnames[index]);
+			len += scnprintf(buf + len, PAGE_SIZE - len, "%s\n",
+					 freqlimit_srcnames[index]);
 #endif
 		src_ind >>= 1;
 	}
