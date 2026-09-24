@@ -15,11 +15,12 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
 #include <linux/units.h>
 #endif
+#include <linux/string.h>
 
 #include "hsmp.h"
 #include "amd_hsmp.h"
 
-#define HSMP_HWMON_NAME		"amd_hsmp_hwmon"
+#define HSMP_HWMON_NAME		"amd_hsmp_socket0"
 
 static int hsmp_hwmon_write(struct device *dev, enum hwmon_sensor_types type,
 			    u32 attr, int channel, long val)
@@ -128,8 +129,11 @@ static const struct hwmon_chip_info hsmp_chip_info = {
 int hsmp_create_sensor(struct device *dev, u16 sock_ind)
 {
 	struct device *hwmon_dev;
+	char hwmon_dev_name[] = HSMP_HWMON_NAME;
+	char* name_ind = hwmon_dev_name + strlen(hwmon_dev_name) - 1;
 
-	hwmon_dev = devm_hwmon_device_register_with_info(dev, HSMP_HWMON_NAME,
+	*name_ind += sock_ind;
+	hwmon_dev = devm_hwmon_device_register_with_info(dev, hwmon_sanitize_name(hwmon_dev_name),
 							 (void *)(uintptr_t)sock_ind,
 							 &hsmp_chip_info,
 							 NULL);
